@@ -31,10 +31,10 @@
     "bring-mcp": "./build/src/index.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/inspector": "^0.14.2",
+    "@modelcontextprotocol/inspector": "^0.15.0",
     "@modelcontextprotocol/sdk": "^1.12.0",
     "bring-shopping": "^2.0.1",
-    "dotenv": "^16.5.0",
+    "dotenv": "^17.0.0",
     "zod": "^3.25.23"
   },
   "devDependencies": {
@@ -44,7 +44,7 @@
     "@typescript-eslint/parser": "^8.32.1",
     "eslint": "^9.27.0",
     "eslint-config-prettier": "^10.1.5",
-    "eslint-plugin-jest": "^28.11.0",
+    "eslint-plugin-jest": "^29.0.1",
     "jest": "^30.0.0",
     "prettier": "^3.5.3",
     "ts-jest": "^29.3.4",
