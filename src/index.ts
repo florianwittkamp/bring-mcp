@@ -14,7 +14,6 @@ import { registerCatalogTools } from './tools/catalogTools.js';
 const server = new McpServer({
   name: 'bring',
   version: '1.0.0',
-  capabilities: { resources: {}, tools: {} },
 });
 
 // const bc = new BringClient(); // Moved into main
