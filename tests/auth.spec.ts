@@ -127,10 +127,10 @@ describe('MCP Bring! Server - Tool Registration (Post-Login Refactor)', () => {
     const loginTool = getTool('login');
     expect(loginTool).toBeUndefined(); // The login tool should not be registered
     expect(mockMcpServerInstance.tool).not.toHaveBeenCalledWith(
-        'login',
-        expect.any(String),
-        expect.any(Object),
-        expect.any(Function),
+      'login',
+      expect.any(String),
+      expect.any(Object),
+      expect.any(Function),
     );
   });
 });
