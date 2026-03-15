@@ -25,7 +25,7 @@ export let mockDeleteMultipleItemsFromList: jest.MockedFunction<(...args: unknow
 
 // --- Mock for StreamableHTTPServerTransport ---
 export const mockStreamableHTTPTransportInstance = {
-  handleRequest: jest.fn().mockResolvedValue(undefined),
+  handleRequest: jest.fn<() => Promise<void>>().mockResolvedValue(undefined),
 };
 
 jest.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
