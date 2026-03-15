@@ -8,6 +8,7 @@
     "lint:ci": "prettier --check . && eslint . --ext .ts",
     "test:ci": "npm run lint:ci && NODE_OPTIONS=--experimental-vm-modules jest --coverage",
     "build": "tsc",
+    "start": "node build/src/index.js",
     "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest",
     "clean": "rm -rf node_modules package-lock.json build",
     "rebuild": "npm run clean && npm install && npm run build",

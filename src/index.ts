@@ -165,8 +165,15 @@ async function main() {
       return;
     }
 
-    // Only serve MCP traffic at /mcp
+    // Health check endpoint used by Railway and other platforms
     const pathname = req.url?.split('?')[0];
+    if (pathname === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok' }));
+      return;
+    }
+
+    // Only serve MCP traffic at /mcp
     if (pathname !== '/mcp') {
       res.writeHead(404);
       res.end('Not Found');
