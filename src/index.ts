@@ -106,6 +106,27 @@ async function readRequestBody(req: IncomingMessage): Promise<unknown> {
   });
 }
 
+function setCorsHeaders(res: ServerResponse, origin: string | undefined, allowedOrigin: string): void {
+  // Reflect the request Origin only when CORS_ORIGIN is a specific domain, otherwise use wildcard
+  const effectiveOrigin = allowedOrigin === '*' ? '*' : (origin ?? '*');
+  res.setHeader('Access-Control-Allow-Origin', effectiveOrigin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Accept, Authorization, x-api-key, Mcp-Session-Id, Last-Event-ID',
+  );
+  res.setHeader('Access-Control-Expose-Headers', 'Mcp-Session-Id');
+  res.setHeader('Access-Control-Max-Age', '86400');
+}
+
+function isAuthenticated(req: IncomingMessage, apiKey: string | undefined): boolean {
+  if (!apiKey) return true; // No MCP_API_KEY set: open access
+  const auth = req.headers['authorization'];
+  if (auth?.startsWith('Bearer ') && auth.slice(7) === apiKey) return true;
+  if (req.headers['x-api-key'] === apiKey) return true;
+  return false;
+}
+
 // Start the server
 async function main() {
   if (!process.env.MAIL || !process.env.PW) {
@@ -130,13 +151,41 @@ async function main() {
   await server.connect(transport);
 
   const PORT = parseInt(process.env.PORT ?? '3000', 10);
+  const API_KEY = process.env.MCP_API_KEY; // Optional bearer token / API key
+  const ALLOWED_ORIGIN = process.env.CORS_ORIGIN ?? '*'; // e.g. "https://claude.ai"
 
   const httpServer = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    const origin = req.headers['origin'] as string | undefined;
+    setCorsHeaders(res, origin, ALLOWED_ORIGIN);
+
+    // Handle CORS preflight
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    // Only serve MCP traffic at /mcp
+    const pathname = req.url?.split('?')[0];
+    if (pathname !== '/mcp') {
+      res.writeHead(404);
+      res.end('Not Found');
+      return;
+    }
+
+    // Authenticate when MCP_API_KEY is configured
+    if (!isAuthenticated(req, API_KEY)) {
+      res.writeHead(401, { 'WWW-Authenticate': 'Bearer' });
+      res.end('Unauthorized');
+      return;
+    }
+
     try {
       if (req.method === 'POST') {
         const body = await readRequestBody(req);
         await transport.handleRequest(req, res, body);
       } else {
+        // GET (SSE streaming) and DELETE (session close)
         await transport.handleRequest(req, res);
       }
     } catch (err) {
