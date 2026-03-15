@@ -1,7 +1,7 @@
 /// <reference types="jest" />
 
 import { jest } from '@jest/globals';
-import { mockMcpServerInstance, mockStdioServerTransportInstance } from './helpers'; // Assuming StdioServerTransport is also mocked in helpers
+import { mockMcpServerInstance, mockStreamableHTTPTransportInstance } from './helpers';
 
 // Store original process.env
 const originalEnv = process.env;
@@ -44,19 +44,16 @@ describe('MCP Bring! Server - Integration Tests (Main Entry Point)', () => {
     mockConsoleError.mockRestore();
   });
 
-  it('should initialize StdioServerTransport and connect McpServer when env vars are set', async () => {
+  it('should initialize StreamableHTTPServerTransport and connect McpServer when env vars are set', async () => {
     process.env.MAIL = 'test@example.com';
     process.env.PW = 'password';
 
     // Dynamically import to trigger script execution
     await import('../src/index.js');
 
-    // Check if StdioServerTransport constructor was called (via the mock in helpers.ts)
-    // No direct way to check constructor call count of the class itself, but McpServer.connect uses its instance.
-    // We rely on the mockMcpServerInstance.connect to have been called with the instance from mockStdioServerTransportInstance.
     expect(mockMcpServerInstance.connect).toHaveBeenCalledTimes(1);
-    expect(mockMcpServerInstance.connect).toHaveBeenCalledWith(mockStdioServerTransportInstance); // Ensure it's called with the correct transport instance
-    expect(mockConsoleError).toHaveBeenCalledWith('MCP server for Bring! API is running on STDIO');
+    expect(mockMcpServerInstance.connect).toHaveBeenCalledWith(mockStreamableHTTPTransportInstance);
+    expect(mockConsoleError).toHaveBeenCalledWith('MCP server for Bring! API is running on HTTP port 3000');
     expect(mockExit).not.toHaveBeenCalled();
   });
 

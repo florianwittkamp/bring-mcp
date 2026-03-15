@@ -23,14 +23,22 @@ export let mockLoadCatalog: jest.MockedFunction<(...args: unknown[]) => Promise<
 export let mockGetPendingInvitations: jest.MockedFunction<(...args: unknown[]) => Promise<unknown>>;
 export let mockDeleteMultipleItemsFromList: jest.MockedFunction<(...args: unknown[]) => Promise<unknown>>;
 
-// --- Mock for StdioServerTransport ---
-export const mockStdioServerTransportInstance = {
-  // Potentially mock methods like .on, .send if used by McpServer.connect
-  // For now, it's an empty object, assuming McpServer.connect itself is what we are testing mostly.
+// --- Mock for StreamableHTTPServerTransport ---
+export const mockStreamableHTTPTransportInstance = {
+  handleRequest: jest.fn().mockResolvedValue(undefined),
 };
 
-jest.mock('@modelcontextprotocol/sdk/server/stdio.js', () => ({
-  StdioServerTransport: jest.fn(() => mockStdioServerTransportInstance), // Ensure this mock is used
+jest.mock('@modelcontextprotocol/sdk/server/streamableHttp.js', () => ({
+  StreamableHTTPServerTransport: jest.fn(() => mockStreamableHTTPTransportInstance),
+}));
+
+// --- Mock for node:http ---
+export const mockHttpServerInstance = {
+  listen: jest.fn(),
+};
+
+jest.mock('node:http', () => ({
+  createServer: jest.fn(() => mockHttpServerInstance),
 }));
 
 jest.mock('../src/bringClient.js', () => {

@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import http, { IncomingMessage, ServerResponse } from 'node:http';
 import { z, ZodRawShape, ZodObject } from 'zod';
 import { BringClient } from './bringClient.js';
 import 'dotenv/config';
@@ -15,8 +16,6 @@ const server = new McpServer({
   name: 'bring',
   version: '1.0.0',
 });
-
-// const bc = new BringClient(); // Moved into main
 
 // Define a type for content parts
 type McpContentPart = { type: 'text'; text: string; [key: string]: unknown };
@@ -91,7 +90,21 @@ export function registerTool(options: {
   }
 }
 
-// Register login tool and other tools moved into main
+async function readRequestBody(req: IncomingMessage): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => {
+      try {
+        const body = Buffer.concat(chunks).toString('utf-8');
+        resolve(body ? JSON.parse(body) : undefined);
+      } catch {
+        reject(new Error('Invalid JSON in request body'));
+      }
+    });
+    req.on('error', reject);
+  });
+}
 
 // Start the server
 async function main() {
@@ -111,9 +124,32 @@ async function main() {
   registerUserTools(server, bc);
   registerCatalogTools(server, bc);
 
-  const transport = new StdioServerTransport();
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined, // stateless mode: no session management
+  });
   await server.connect(transport);
-  console.error('MCP server for Bring! API is running on STDIO');
+
+  const PORT = parseInt(process.env.PORT ?? '3000', 10);
+
+  const httpServer = http.createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    try {
+      if (req.method === 'POST') {
+        const body = await readRequestBody(req);
+        await transport.handleRequest(req, res, body);
+      } else {
+        await transport.handleRequest(req, res);
+      }
+    } catch (err) {
+      console.error('Request handling error:', err);
+      if (!res.headersSent) {
+        res.writeHead(500);
+        res.end('Internal Server Error');
+      }
+    }
+  });
+
+  console.error(`MCP server for Bring! API is running on HTTP port ${PORT}`);
+  httpServer.listen(PORT);
 }
 
 main().catch((e) => {
