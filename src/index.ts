@@ -124,6 +124,9 @@ function isAuthenticated(req: IncomingMessage, apiKey: string | undefined): bool
   const auth = req.headers['authorization'];
   if (auth?.startsWith('Bearer ') && auth.slice(7) === apiKey) return true;
   if (req.headers['x-api-key'] === apiKey) return true;
+  // Accept key via URL query parameter (?key=...) for clients that cannot set headers (e.g. Claude.ai connector)
+  const urlKey = new URL(req.url ?? '', 'http://localhost').searchParams.get('key');
+  if (urlKey === apiKey) return true;
   return false;
 }
 
