@@ -382,8 +382,12 @@ describe('MCP Bring! Server - Item Tools', () => {
       expect(tool?.description).toBe('Delete multiple items from a specific shopping list by their names.');
       expect(tool?.schema).toMatchObject({
         listUuid: expect.anything(),
-        itemNames: expect.objectContaining({ _def: expect.objectContaining({ typeName: 'ZodArray' }) }),
+        itemNames: expect.anything(),
       });
+      const itemNamesSchema = (tool?.schema as { itemNames: { safeParse: (value: unknown) => { success: boolean } } })
+        .itemNames;
+      expect(itemNamesSchema.safeParse(['ItemA']).success).toBe(true);
+      expect(itemNamesSchema.safeParse([]).success).toBe(false);
     });
 
     it('should call BringClient.deleteMultipleItemsFromList and return success', async () => {
