@@ -8,6 +8,8 @@ import { BringClient } from './bringClient.js';
 import 'dotenv/config';
 
 import express, { Request, Response } from 'express';
+import cors from 'cors';
+import { Scalekit } from '@scalekit-sdk/node';
 
 import { registerListTools } from './tools/listTools.js';
 import { registerItemTools } from './tools/itemTools.js';
@@ -115,14 +117,97 @@ async function runStdioServer(bc: BringClient) {
 
 async function runHttpServer(bc: BringClient, port: number) {
   const app = express();
+  app.use(cors({ origin: true, credentials: false }));
   app.use(express.json());
 
-  // MCP Streamable HTTP endpoint (POST for requests)
+  // === Scalekit OAuth 2.1 Configuration (optional but recommended for remote use) ===
+  const SK_ENV_URL = process.env.SK_ENV_URL || '';
+  const SK_CLIENT_ID = process.env.SK_CLIENT_ID || '';
+  const SK_CLIENT_SECRET = process.env.SK_CLIENT_SECRET || '';
+  const PROTECTED_RESOURCE_METADATA = process.env.PROTECTED_RESOURCE_METADATA || '';
+  const EXPECTED_AUDIENCE =
+    process.env.EXPECTED_AUDIENCE || `http://localhost:${port}/`;
+
+  const isAuthEnabled = !!(SK_CLIENT_ID && SK_ENV_URL && PROTECTED_RESOURCE_METADATA);
+
+  let scalekit: Scalekit | null = null;
+  if (isAuthEnabled) {
+    scalekit = new Scalekit(SK_ENV_URL, SK_CLIENT_ID, SK_CLIENT_SECRET);
+    console.error('🔐 Scalekit OAuth 2.1 authentication ENABLED for HTTP MCP endpoint');
+  } else {
+    console.error('⚠️  HTTP mode running WITHOUT OAuth protection. For production/remote/Grok use, configure Scalekit env vars.');
+  }
+
+  const RESOURCE_METADATA_PATH = '/.well-known/oauth-protected-resource';
+  const WWW_AUTHENTICATE_HEADER = `Bearer realm="OAuth", resource_metadata="${RESOURCE_METADATA_PATH}"`;
+
+  // Public: OAuth Protected Resource Metadata endpoint (required for MCP OAuth discovery)
+  app.get(RESOURCE_METADATA_PATH, (_req: Request, res: Response) => {
+    if (!PROTECTED_RESOURCE_METADATA) {
+      return res.status(500).json({ error: 'PROTECTED_RESOURCE_METADATA env var is not set' });
+    }
+    try {
+      const metadata = JSON.parse(PROTECTED_RESOURCE_METADATA);
+      res.type('application/json').send(JSON.stringify(metadata, null, 2));
+    } catch (e) {
+      res.status(500).json({ error: 'Invalid JSON in PROTECTED_RESOURCE_METADATA' });
+    }
+  });
+
+  // Health check (public)
+  app.get('/health', (_req: Request, res: Response) => {
+    res.json({ status: 'healthy', oauthEnabled: isAuthEnabled, port });
+  });
+
+  // Authentication middleware (protects /mcp when Scalekit is configured)
+  if (isAuthEnabled && scalekit) {
+    app.use(async (req: Request, res: Response, next) => {
+      // Skip public endpoints
+      if (
+        req.path === RESOURCE_METADATA_PATH ||
+        req.path === '/health' ||
+        req.method === 'OPTIONS'
+      ) {
+        return next();
+      }
+
+      // Only protect the MCP endpoint
+      if (req.path !== '/mcp') {
+        return next();
+      }
+
+      const authHeader = req.headers.authorization;
+      const token = authHeader?.startsWith('Bearer ')
+        ? authHeader.slice(7).trim()
+        : undefined;
+
+      if (!token) {
+        return res
+          .status(401)
+          .set('WWW-Authenticate', WWW_AUTHENTICATE_HEADER)
+          .json({ error: 'Missing Bearer token. Please authenticate using Scalekit OAuth 2.1.' });
+      }
+
+      try {
+        await scalekit.validateToken(token, { audience: [EXPECTED_AUDIENCE] });
+        // Token valid - proceed to MCP handler
+        next();
+      } catch (error) {
+        console.error('Scalekit token validation failed:', error);
+        return res
+          .status(401)
+          .set('WWW-Authenticate', WWW_AUTHENTICATE_HEADER)
+          .json({ error: 'Invalid or expired access token' });
+      }
+    });
+  }
+
+  // MCP Streamable HTTP endpoint (POST /mcp) - protected by middleware if auth enabled
   app.post('/mcp', async (req: Request, res: Response) => {
     try {
       const server = createMcpServer(bc);
       const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined, // stateless mode - no session persistence between requests
+        sessionIdGenerator: undefined, // stateless mode
       });
       await server.connect(transport);
       await transport.handleRequest(req, res, req.body);
@@ -148,13 +233,13 @@ async function runHttpServer(bc: BringClient, port: number) {
     }
   });
 
-  // Reject other methods on /mcp with 405
+  // Reject other HTTP methods on /mcp
   const methodNotAllowed = (req: Request, res: Response) => {
     res.status(405).json({
       jsonrpc: '2.0',
       error: {
         code: -32000,
-        message: 'Method not allowed. MCP requests must use POST.',
+        message: 'Method not allowed. MCP over HTTP requires POST.',
       },
       id: null,
     });
@@ -166,8 +251,15 @@ async function runHttpServer(bc: BringClient, port: number) {
 
   app.listen(port, () => {
     console.error(`MCP server for Bring! API is running on HTTP port ${port}`);
-    console.error(`  Endpoint: http://localhost:${port}/mcp (use this base URL or https://your-domain.com for Grok remote MCP)`);
-    console.error('  Compatible with Grok Remote MCP Tools (Streaming HTTP transport)');
+    console.error(`  Endpoint: POST http://localhost:${port}/mcp`);
+    if (isAuthEnabled) {
+      console.error(`  🔐 Protected with Scalekit OAuth 2.1`);
+      console.error(`  Metadata: http://localhost:${port}${RESOURCE_METADATA_PATH}`);
+      console.error(`  → Register your server URL in Scalekit dashboard (include trailing / if required)`);
+      console.error(`  → Clients (Grok etc.) must send valid Bearer token in Authorization header`);
+    } else {
+      console.error(`  ⚠️  No authentication - suitable for local testing only`);
+    }
   });
 }
 
