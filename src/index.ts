@@ -15,7 +15,7 @@ import { registerUserTools } from './tools/userTools.js';
 import { registerCatalogTools } from './tools/catalogTools.js';
 
 // Define a type for content parts
-const type McpContentPart = { type: 'text'; text: string; [key: string]: unknown };
+type McpContentPart = { type: 'text'; text: string; [key: string]: unknown };
 
 // Helper function to create a simple text response
 function textToolResult(text: string) {
