@@ -2,24 +2,20 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z, ZodRawShape, ZodObject } from 'zod';
 import { BringClient } from './bringClient.js';
 import 'dotenv/config';
+
+import express, { Request, Response } from 'express';
 
 import { registerListTools } from './tools/listTools.js';
 import { registerItemTools } from './tools/itemTools.js';
 import { registerUserTools } from './tools/userTools.js';
 import { registerCatalogTools } from './tools/catalogTools.js';
 
-const server = new McpServer({
-  name: 'bring',
-  version: '1.0.0',
-});
-
-// const bc = new BringClient(); // Moved into main
-
 // Define a type for content parts
-type McpContentPart = { type: 'text'; text: string; [key: string]: unknown };
+const type McpContentPart = { type: 'text'; text: string; [key: string]: unknown };
 
 // Helper function to create a simple text response
 function textToolResult(text: string) {
@@ -91,7 +87,89 @@ export function registerTool(options: {
   }
 }
 
-// Register login tool and other tools moved into main
+/**
+ * Creates a new MCP server instance and registers all Bring! tools.
+ * Used for both stdio and per-request in stateless HTTP mode.
+ */
+function createMcpServer(bc: BringClient): McpServer {
+  const server = new McpServer({
+    name: 'bring',
+    version: '1.0.0',
+  });
+
+  // Register tools from modules
+  registerListTools(server, bc);
+  registerItemTools(server, bc);
+  registerUserTools(server, bc);
+  registerCatalogTools(server, bc);
+
+  return server;
+}
+
+async function runStdioServer(bc: BringClient) {
+  const server = createMcpServer(bc);
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error('MCP server for Bring! API is running on STDIO');
+}
+
+async function runHttpServer(bc: BringClient, port: number) {
+  const app = express();
+  app.use(express.json());
+
+  // MCP Streamable HTTP endpoint (POST for requests)
+  app.post('/mcp', async (req: Request, res: Response) => {
+    try {
+      const server = createMcpServer(bc);
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined, // stateless mode - no session persistence between requests
+      });
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+
+      res.on('close', () => {
+        transport.close();
+        if (typeof (server as any).close === 'function') {
+          (server as any).close();
+        }
+      });
+    } catch (error) {
+      console.error('Error handling MCP request:', error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32603,
+            message: 'Internal server error',
+          },
+          id: null,
+        });
+      }
+    }
+  });
+
+  // Reject other methods on /mcp with 405
+  const methodNotAllowed = (req: Request, res: Response) => {
+    res.status(405).json({
+      jsonrpc: '2.0',
+      error: {
+        code: -32000,
+        message: 'Method not allowed. MCP requests must use POST.',
+      },
+      id: null,
+    });
+  };
+
+  app.get('/mcp', methodNotAllowed);
+  app.delete('/mcp', methodNotAllowed);
+  app.put('/mcp', methodNotAllowed);
+
+  app.listen(port, () => {
+    console.error(`MCP server for Bring! API is running on HTTP port ${port}`);
+    console.error(`  Endpoint: http://localhost:${port}/mcp (use this base URL or https://your-domain.com for Grok remote MCP)`);
+    console.error('  Compatible with Grok Remote MCP Tools (Streaming HTTP transport)');
+  });
+}
 
 // Start the server
 async function main() {
@@ -105,15 +183,27 @@ async function main() {
 
   const bc = new BringClient(); // Instantiated after env check
 
-  // Register tools from modules
-  registerListTools(server, bc);
-  registerItemTools(server, bc);
-  registerUserTools(server, bc);
-  registerCatalogTools(server, bc);
+  const args = process.argv.slice(2);
+  const useHttp =
+    args.includes('--http') ||
+    args.includes('--streamable-http') ||
+    !!process.env.PORT ||
+    !!process.env.MCP_PORT ||
+    !!process.env.HTTP_PORT;
 
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-  console.error('MCP server for Bring! API is running on STDIO');
+  if (useHttp) {
+    const portStr =
+      process.env.PORT || process.env.MCP_PORT || process.env.HTTP_PORT || '3000';
+    const port = parseInt(portStr, 10);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      console.error(`Invalid port: ${portStr}. Using default 3000.`);
+      await runHttpServer(bc, 3000);
+    } else {
+      await runHttpServer(bc, port);
+    }
+  } else {
+    await runStdioServer(bc);
+  }
 }
 
 main().catch((e) => {
