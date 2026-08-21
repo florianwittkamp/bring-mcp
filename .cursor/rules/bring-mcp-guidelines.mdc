@@ -57,7 +57,7 @@ The following tools are registered and available through the MCP server:
 - **`deleteMultipleItemsFromList`**: Delete multiple items from a list by their names
 
 ### Image Management
-- **`saveItemImage`**: Save an image for an item on a shopping list
+- **`saveItemImage`**: Save an item image from bounded base64-encoded data
 - **`removeItemImage`**: Remove an image from an item
 
 ### User Management
@@ -95,11 +95,11 @@ The following tools are registered and available through the MCP server:
     - An `isLoggedIn` flag tracks the current authentication status.
     - A private `ensureLoggedIn()` method is called before each API request to ensure the user is logged in, attempting to log in if necessary.
 - **API Method Signatures**:
-    - `saveItemImage(listUuid: string, itemId: string, imagePathOrUrl: string)`: The `imagePathOrUrl` is passed directly to the library.
-    - `removeItemImage(listUuid: string, itemId: string)`
+    - `saveItemImage(itemUuid: string, imageData: string)`: Passes bounded base64 image data to the library.
+    - `removeItemImage(itemUuid: string)`
     - `saveItemBatch(listUuid: string, items: Array<{ itemName: string; specification?: string }>)`: Saves multiple items to a list.
     - `deleteMultipleItemsFromList(listUuid: string, itemNames: string[])`: Deletes multiple items from a list by their names.
-    - **Note**: For `saveItemImage` and `removeItemImage`, `@ts-expect-error` comments are used. This is because the `bring-shopping` library's TypeScript definitions might be outdated. The current signatures are based on analysis of the library's changelog and relevant pull requests.
+    - The image methods follow the `bring-shopping` 2.x type definitions and use item UUIDs directly.
 - **Error Handling**: The private `_login()` method in `BringClient` throws specific, user-friendly error messages for invalid credentials or connection issues. These messages are propagated by the `ensureLoggedIn` method and then by the `registerTool` helper if an API call fails due to login issues.
 - **Item Processing**: The `getItems` method automatically adds `itemId` properties to items in the response, setting `itemId` equal to the item's `name` for consistency.
 

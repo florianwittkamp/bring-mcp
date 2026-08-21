@@ -7,6 +7,7 @@ import {
   itemIdParam,
   itemNameParam,
   itemSpecificationParam,
+  itemImageDataParam,
   saveItemBatchParams,
   itemNamesArrayParam,
 } from '../schemaShared.js';
@@ -101,23 +102,21 @@ export function registerItemTools(server: McpServer, bc: BringClient) {
   });
 
   const saveItemImageParams = z.object({
-    ...listUuidParam,
     ...itemIdParam,
-    imagePathOrUrl: z.string().describe('Local file path or URL of the image.'),
+    ...itemImageDataParam,
   });
   registerTool({
     server,
     bc,
     name: 'saveItemImage',
-    description: 'Save an image for an item on a shopping list. Provide a local path or a URL to the image.',
+    description: 'Save an image for an item. Provide the image as base64-encoded data (maximum decoded size: 5 MiB).',
     schemaShape: saveItemImageParams.shape,
     actionFn: async (args: z.infer<typeof saveItemImageParams>, bc: BringClient) =>
-      bc.saveItemImage(args.listUuid, args.itemId, args.imagePathOrUrl),
+      bc.saveItemImage(args.itemId, args.imageData),
     failureMessage: 'Failed to save item image',
   });
 
   const removeItemImageParams = z.object({
-    ...listUuidParam,
     ...itemIdParam,
   });
   registerTool({
@@ -126,8 +125,7 @@ export function registerItemTools(server: McpServer, bc: BringClient) {
     name: 'removeItemImage',
     description: 'Remove an image from an item on a shopping list.',
     schemaShape: removeItemImageParams.shape,
-    actionFn: async (args: z.infer<typeof removeItemImageParams>, bc: BringClient) =>
-      bc.removeItemImage(args.listUuid, args.itemId),
+    actionFn: async (args: z.infer<typeof removeItemImageParams>, bc: BringClient) => bc.removeItemImage(args.itemId),
     failureMessage: 'Failed to remove item image',
   });
 

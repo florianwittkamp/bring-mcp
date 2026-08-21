@@ -16,8 +16,16 @@ export const itemSpecificationParam = {
   specification: z.string().nullable().optional(),
 };
 
-export const itemImageParam = {
-  imagePathOrUrl: z.string().min(1, { message: 'Image path or URL cannot be empty' }),
+const MAX_IMAGE_DATA_LENGTH = 6_990_508;
+const BASE64_IMAGE_PATTERN = /^[A-Za-z0-9+/]+={0,2}$/;
+
+export const itemImageDataParam = {
+  imageData: z
+    .string()
+    .min(1, { message: 'Image data cannot be empty' })
+    .max(MAX_IMAGE_DATA_LENGTH, { message: 'Image data exceeds the 5 MiB limit' })
+    .regex(BASE64_IMAGE_PATTERN, { message: 'Image data must be valid base64' })
+    .refine((value) => value.length % 4 === 0, { message: 'Image data must be valid base64' }),
 };
 
 export const batchItemSchema = z.object({
