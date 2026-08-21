@@ -66,6 +66,14 @@ jobs:
           echo "Setting package.json version to $VERSION"
           npm version "$VERSION" --no-git-tag-version
 
+      - name: Normalize package metadata
+        run: |
+          npm pkg set \
+            "repository.type=git" \
+            "repository.url=git+https://github.com/${GITHUB_REPOSITORY}.git" \
+            "bin.bring-mcp=build/src/index.js"
+          npm pkg fix
+
       - name: 🚀 Publish to npm
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.release_tag }}
