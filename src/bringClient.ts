@@ -85,30 +85,23 @@ export class BringClient {
 
   /**
    * Saves an image for an item on a shopping list.
-   * @param listUuid The UUID of the shopping list.
-   * @param itemId The ID of the item.
-   * @param imagePathOrUrl Local file path or URL of the image.
+   * @param itemUuid The UUID of the item.
+   * @param imageData Base64-encoded image data.
    * @returns A promise that resolves when the image has been saved.
    */
-  async saveItemImage(listUuid: string, itemId: string, imagePathOrUrl: string): Promise<unknown> {
+  async saveItemImage(itemUuid: string, imageData: string): Promise<unknown> {
     await this.ensureLoggedIn();
-    // Based on PR #221 in the bring-shopping library, this method expects listUuid, itemId, and a string for imagePathOrUrl.
-    // The library is expected to handle whether this string is a local file path or a URL.
-    // @ts-expect-error Type definitions for bring-shopping may be outdated. Signature based on PR #221.
-    return this.bring.saveItemImage(listUuid, itemId, imagePathOrUrl);
+    return this.bring.saveItemImage(itemUuid, { imageData });
   }
 
   /**
    * Removes an image from an item on a shopping list.
-   * @param listUuid The UUID of the shopping list.
-   * @param itemId The ID of the item.
+   * @param itemUuid The UUID of the item.
    * @returns A promise that resolves when the image has been removed.
    */
-  async removeItemImage(listUuid: string, itemId: string): Promise<unknown> {
+  async removeItemImage(itemUuid: string): Promise<unknown> {
     await this.ensureLoggedIn();
-    // The bring-shopping library's changelog (v1.5.1) fixed this method, implying the signature (listUuid, itemId) is correct.
-    // @ts-expect-error Type definitions for bring-shopping may be outdated. Signature based on changelog v1.5.1.
-    return this.bring.removeItemImage(listUuid, itemId);
+    return this.bring.removeItemImage(itemUuid);
   }
 
   async getAllUsersFromList(listUuid: string) {

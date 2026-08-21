@@ -6,6 +6,8 @@ const mockSaveItem = jest.fn();
 const mockRemoveItem = jest.fn();
 const mockLoadTranslations = jest.fn();
 const mockLoadCatalog = jest.fn();
+const mockSaveItemImage = jest.fn();
+const mockRemoveItemImage = jest.fn();
 
 jest.mock('bring-shopping', () => {
   const token = JSON.stringify({
@@ -19,6 +21,8 @@ jest.mock('bring-shopping', () => {
     removeItem: mockRemoveItem,
     loadTranslations: mockLoadTranslations,
     loadCatalog: mockLoadCatalog,
+    saveItemImage: mockSaveItemImage,
+    removeItemImage: mockRemoveItemImage,
     bearerToken: `a.${base64Url}.a`,
   }));
 });
@@ -94,5 +98,23 @@ describe('BringClient functionality', () => {
     await bc.loadCatalog('de-DE');
 
     expect(mockLoadCatalog).toHaveBeenCalledWith('de-DE');
+  });
+
+  test('saveItemImage sends base64 image data with the dependency signature', async () => {
+    mockSaveItemImage.mockResolvedValue({ imageUrl: 'https://example.test/image.jpg' });
+    const bc = new BringClient();
+
+    await bc.saveItemImage('item-uuid', 'aW1hZ2U=');
+
+    expect(mockSaveItemImage).toHaveBeenCalledWith('item-uuid', { imageData: 'aW1hZ2U=' });
+  });
+
+  test('removeItemImage sends only the item UUID', async () => {
+    mockRemoveItemImage.mockResolvedValue('');
+    const bc = new BringClient();
+
+    await bc.removeItemImage('item-uuid');
+
+    expect(mockRemoveItemImage).toHaveBeenCalledWith('item-uuid');
   });
 });

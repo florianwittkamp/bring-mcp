@@ -61,7 +61,7 @@ This is the recommended and most portable configuration. It ensures you always u
 - **`removeItem`**: Remove an item from a specific shopping list
 - **`moveToRecentList`**: Move an item to the recently used items list
 - **`deleteMultipleItemsFromList`**: Delete multiple items from a list by their names
-- **`saveItemImage`**: Save an image for an item on a shopping list
+- **`saveItemImage`**: Save an item image from base64-encoded image data (maximum decoded size: 5 MiB)
 - **`removeItemImage`**: Remove an image from an item
 - **`getAllUsersFromList`**: Get all users associated with a shopping list
 - **`getUserSettings`**: Get settings for the authenticated user

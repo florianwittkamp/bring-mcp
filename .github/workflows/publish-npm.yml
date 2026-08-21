@@ -45,20 +45,26 @@ jobs:
           fi
 
       - name: 🔢 Set package.json version from tag
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          TAG=${{ github.event.release.tag_name }}
-          VERSION=${TAG#v}
+          if [[ ! "$RELEASE_TAG" =~ ^v?[0-9]+\.[0-9]+\.[0-9]+(-beta(\.[0-9]+)?)?$ ]]; then
+            echo "Invalid release tag"
+            exit 1
+          fi
+          VERSION=${RELEASE_TAG#v}
           echo "Setting package.json version to $VERSION"
           npm version "$VERSION" --no-git-tag-version
 
       - name: 🚀 Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          echo "Publishing version: ${{ github.event.release.tag_name }}"
+          echo "Publishing version: $RELEASE_TAG"
           TAG="latest"
-          if [[ "${{ github.event.release.tag_name }}" == *"beta"* ]]; then
+          if [[ "$RELEASE_TAG" == *"beta"* ]]; then
             echo "Beta release detected."
             TAG="beta"
           fi
           npm publish --tag "$TAG"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.npm_token }}
