@@ -8,3 +8,8 @@ updates:
       all-dependencies:
         patterns:
           - '*'
+    ignore:
+      # TypeScript 7 is not yet supported by @typescript-eslint.
+      - dependency-name: 'typescript'
+        versions:
+          - '>=7.0.0'
