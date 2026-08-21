@@ -180,10 +180,10 @@ Build the project:
 npm run build
 ```
 
-### Key Dependencies
+### Key Dependencies and Tools
 
 - `@modelcontextprotocol/sdk`: For MCP server implementation
-- `@modelcontextprotocol/inspector`: For testing and debugging MCP servers
+- `@modelcontextprotocol/inspector`: Run on demand with `npx` for testing and debugging MCP servers
 - `bring-shopping`: Node.js wrapper for the Bring! API
 - `zod`: For schema definition and validation
 - `dotenv`: For managing environment variables
