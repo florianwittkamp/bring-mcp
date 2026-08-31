@@ -2,6 +2,7 @@ import {
   mockGetAllUsersFromList,
   mockGetUserSettings,
   mockGetPendingInvitations,
+  mockLoadLists,
   mockMcpServerInstance,
   mockTools,
   loadServer,
@@ -190,6 +191,7 @@ describe('MCP Bring! Server - User Tools', () => {
         ],
       };
       mockGetUserSettings.mockResolvedValue(fakeSettingsWithoutUuid);
+      mockLoadLists.mockResolvedValue({ lists: [] });
       const tool = getTool('getDefaultList');
       if (!tool) throw new Error('Tool getDefaultList not found');
 
@@ -197,7 +199,10 @@ describe('MCP Bring! Server - User Tools', () => {
       expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
       expect(result).toEqual({
         content: [
-          { type: 'text', text: 'Failed to get default list UUID: Default list UUID not found in user settings.' },
+          {
+            type: 'text',
+            text: 'No default list is configured. Set one in the Bring app, or call loadLists to choose.',
+          },
         ],
       });
     });
@@ -218,6 +223,7 @@ describe('MCP Bring! Server - User Tools', () => {
     it('should return error if usersettings structure is invalid', async () => {
       const fakeSettingsInvalidStructure = { someOtherProperty: 'value' }; // Missing usersettings array
       mockGetUserSettings.mockResolvedValue(fakeSettingsInvalidStructure);
+      mockLoadLists.mockResolvedValue({ lists: [] });
       const tool = getTool('getDefaultList');
       if (!tool) throw new Error('Tool getDefaultList not found');
 
@@ -225,9 +231,67 @@ describe('MCP Bring! Server - User Tools', () => {
       expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
       expect(result).toEqual({
         content: [
-          { type: 'text', text: 'Failed to get default list UUID: Default list UUID not found in user settings.' },
+          {
+            type: 'text',
+            text: 'No default list is configured. Set one in the Bring app, or call loadLists to choose.',
+          },
         ],
       });
+    });
+
+    it('should fall back to the sole list UUID when defaultListUUID is unset', async () => {
+      const soleListUuid = 'casa-list-uuid-456';
+      mockGetUserSettings.mockResolvedValue({
+        usersettings: [
+          { key: 'autoPush', value: 'true' },
+          { key: 'onboardClient', value: 'web' },
+        ],
+      });
+      mockLoadLists.mockResolvedValue({
+        lists: [{ listUuid: soleListUuid, name: 'Casa' }],
+      });
+      const tool = getTool('getDefaultList');
+      if (!tool) throw new Error('Tool getDefaultList not found');
+
+      const result = await tool.callback({});
+      expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
+      expect(mockLoadLists).toHaveBeenCalledTimes(1);
+      expect(result).toEqual({
+        content: [{ type: 'text', text: soleListUuid }],
+      });
+    });
+
+    it('should return guidance when defaultListUUID is unset and multiple lists exist', async () => {
+      mockGetUserSettings.mockResolvedValue({
+        usersettings: [{ key: 'autoPush', value: 'true' }],
+      });
+      mockLoadLists.mockResolvedValue({
+        lists: [
+          { listUuid: 'uuid-a', name: 'Casa' },
+          { listUuid: 'uuid-b', name: 'Work' },
+        ],
+      });
+      const tool = getTool('getDefaultList');
+      if (!tool) throw new Error('Tool getDefaultList not found');
+
+      const result = await tool.callback({});
+      expect(mockLoadLists).toHaveBeenCalledTimes(1);
+      expect(result.content[0].text).toMatch(/loadLists/i);
+      expect(result.content[0].text).not.toMatch(/Failed to get default list UUID/i);
+    });
+
+    it('should return guidance when defaultListUUID is unset and no lists exist', async () => {
+      mockGetUserSettings.mockResolvedValue({
+        usersettings: [{ key: 'autoPush', value: 'true' }],
+      });
+      mockLoadLists.mockResolvedValue({ lists: [] });
+      const tool = getTool('getDefaultList');
+      if (!tool) throw new Error('Tool getDefaultList not found');
+
+      const result = await tool.callback({});
+      expect(mockLoadLists).toHaveBeenCalledTimes(1);
+      expect(result.content[0].text).toMatch(/loadLists/i);
+      expect(result.content[0].text).not.toMatch(/Failed to get default list UUID/i);
     });
   });
 });
