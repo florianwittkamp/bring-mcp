@@ -59,7 +59,14 @@ export function registerUserTools(server: McpServer, bc: BringClient) {
           return defaultListSetting.value;
         }
       }
-      throw new Error('Default list UUID not found in user settings.');
+
+      const listsResponse = await bc.loadLists();
+      const lists = listsResponse?.lists;
+      if (Array.isArray(lists) && lists.length === 1 && lists[0]?.listUuid) {
+        return lists[0].listUuid;
+      }
+
+      return 'No default list is configured. Set one in the Bring app, or call loadLists to choose.';
     },
     failureMessage: 'Failed to get default list UUID',
     transformResult: (result: string) => ({
