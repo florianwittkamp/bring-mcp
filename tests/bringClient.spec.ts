@@ -27,11 +27,22 @@ jest.mock('bring-shopping', () => {
   }));
 });
 
+let sentBodies: string[] = [];
+
 describe('BringClient functionality', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env.MAIL = 'test@example.com';
     process.env.PW = 'pw';
+    // saveItem/removeItem/moveToRecentList now build their own escaped form
+    // body instead of delegating to bring-shopping, so the suite has to stub
+    // fetch. Without this these tests reach api.getbring.com for real and fail
+    // with a 401.
+    sentBodies = [];
+    global.fetch = jest.fn().mockImplementation((_url: string, init: { body?: string }) => {
+      sentBodies.push(String(init?.body ?? ''));
+      return Promise.resolve({ ok: true, status: 204, text: () => Promise.resolve('') });
+    }) as unknown as typeof fetch;
   });
 
   test('getItems adds itemId to purchase and recently items', async () => {
@@ -51,24 +62,28 @@ describe('BringClient functionality', () => {
   });
 
   test('saveItem forwards empty specification string when undefined', async () => {
-    mockSaveItem.mockResolvedValue({ ok: true });
     const bc = new BringClient();
 
     await bc.saveItem('listA', 'Eggs', undefined);
 
     expect(mockLogin).toHaveBeenCalledTimes(1);
-    expect(mockSaveItem).toHaveBeenCalledWith('listA', 'Eggs', '');
+    const body = new URLSearchParams(sentBodies[0]);
+    expect(body.get('purchase')).toBe('Eggs');
+    expect(body.get('specification')).toBe('');
   });
 
   test('saveItemBatch saves each item individually', async () => {
-    mockSaveItem.mockResolvedValueOnce('r1').mockResolvedValueOnce('r2');
     const bc = new BringClient();
 
-    const result = await bc.saveItemBatch('listB', [{ itemName: 'A', specification: '1' }, { itemName: 'B' }]);
+    await bc.saveItemBatch('listB', [{ itemName: 'A', specification: '1' }, { itemName: 'B' }]);
 
-    expect(mockSaveItem).toHaveBeenNthCalledWith(1, 'listB', 'A', '1');
-    expect(mockSaveItem).toHaveBeenNthCalledWith(2, 'listB', 'B', '');
-    expect(result).toEqual(['r1', 'r2']);
+    expect(sentBodies).toHaveLength(2);
+    const first = new URLSearchParams(sentBodies[0]);
+    const second = new URLSearchParams(sentBodies[1]);
+    expect(first.get('purchase')).toBe('A');
+    expect(first.get('specification')).toBe('1');
+    expect(second.get('purchase')).toBe('B');
+    expect(second.get('specification')).toBe('');
   });
 
   test('deleteMultipleItemsFromList removes each item', async () => {
