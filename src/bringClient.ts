@@ -70,17 +70,58 @@ export class BringClient {
     await this.ensureLoggedIn();
     return this.bring.getItemsDetails(listUuid);
   }
-  async saveItem(listUuid: string, itemName: string, specification: string | null | undefined) {
+  /**
+   * The legacy list-mutation endpoint, sent with correct form encoding.
+   *
+   * `bring-shopping` builds this body by string concatenation with no escaping
+   * (`&purchase=${itemName}&recently=&specification=${specification}&...`), so
+   * any `&`, `+` or `%` in a name corrupts the request - silently, because it
+   * also never checks the response status:
+   *
+   *   "Fish & Chips"  -> stored as "Fish"          (truncated at the &)
+   *   "Salt + Pepper" -> stored as "Salt   Pepper" (+ decoded as a space)
+   *   "50% Cream"     -> never arrives at all      (invalid escape sequence)
+   *
+   * Going through URLSearchParams fixes both problems at once: values are
+   * escaped, and a non-2xx now throws instead of being returned as an ordinary
+   * string. Returns the raw body (empty on the usual 204) so callers see
+   * exactly what the library used to give them.
+   */
+  private async legacyListMutation(listUuid: string, fields: Record<string, string>): Promise<string> {
     await this.ensureLoggedIn();
-    return this.bring.saveItem(listUuid, itemName, specification || '');
+    const headers = this.bring['headers'] as Record<string, string>;
+    const body = new URLSearchParams({
+      purchase: '',
+      recently: '',
+      specification: '',
+      remove: '',
+      sender: 'null',
+      ...fields,
+    }).toString();
+
+    const res = await fetch(`https://api.getbring.com/rest/v2/bringlists/${listUuid}`, {
+      method: 'PUT',
+      headers: {
+        ...headers,
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+      },
+      body,
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      throw new Error(`Bring! API PUT /v2/bringlists/${listUuid} failed (${res.status}): ${text.slice(0, 300)}`);
+    }
+    return text;
+  }
+
+  async saveItem(listUuid: string, itemName: string, specification: string | null | undefined) {
+    return this.legacyListMutation(listUuid, { purchase: itemName, specification: specification || '' });
   }
   async removeItem(listUuid: string, itemId: string) {
-    await this.ensureLoggedIn();
-    return this.bring.removeItem(listUuid, itemId);
+    return this.legacyListMutation(listUuid, { remove: itemId });
   }
   async moveToRecentList(listUuid: string, itemId: string) {
-    await this.ensureLoggedIn();
-    return this.bring.moveToRecentList(listUuid, itemId);
+    return this.legacyListMutation(listUuid, { recently: itemId });
   }
 
   /**
@@ -129,7 +170,7 @@ export class BringClient {
     await this.ensureLoggedIn();
     const results = [];
     for (const item of items) {
-      const result = await this.bring.saveItem(listUuid, item.itemName, item.specification || '');
+      const result = await this.saveItem(listUuid, item.itemName, item.specification || '');
       results.push(result);
     }
     return results;
