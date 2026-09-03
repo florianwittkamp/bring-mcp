@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const noArgsSchema = z.strictObject({});
+
 export const listUuidParam = {
   listUuid: z.string().uuid({ message: 'Invalid list UUID' }),
 };

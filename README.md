@@ -4,7 +4,7 @@
 
 This project implements a local Model Context Protocol (MCP) server in TypeScript that exposes the functionalities of the Bring! shopping list API. It enables applications like Claude Desktop to interact with your Bring! shopping lists using standardized MCP tools.
 
-The server integrates the `bring-shopping` npm package for Bring! API access and leverages `@modelcontextprotocol/sdk` to provide an MCP-compliant server interface.
+The server integrates the `bring-shopping` npm package for Bring! API access and uses the MCP TypeScript SDK v2 server package to provide an MCP-compliant interface.
 
 > **Disclaimer:**  
 > This is a personal project. I am not affiliated with Bring! Labs AG in any way.  
@@ -49,6 +49,9 @@ This is the recommended and most portable configuration. It ensures you always u
   - 🌐 Load translations & catalog
   - 📨 Retrieve pending invitations
 - Communicates via STDIO (for use with Claude Desktop or MCP Inspector)
+- Supports MCP protocol revision `2026-07-28` while continuing to serve legacy 2025 clients
+- Publishes tool titles, annotations, concrete input/output schemas, and machine-readable structured results
+- Marks tool failures with `isError: true` so clients can distinguish them from successful calls
 - Supports Bring! credentials via `.env` file or injected environment variables
 
 ### Available Tools
@@ -117,7 +120,7 @@ Launch the MCP server with:
 node build/src/index.js
 ```
 
-If successful, you'll see: `MCP server for Bring! API is running on STDIO` (on `stderr`).
+If successful, you'll see: `MCP server for Bring! API v<version> is running on STDIO` (on `stderr`).
 
 ---
 
@@ -182,7 +185,8 @@ npm run build
 
 ### Key Dependencies and Tools
 
-- `@modelcontextprotocol/sdk`: For MCP server implementation
+- `@modelcontextprotocol/server`: MCP SDK v2 server and STDIO protocol dispatcher
+- `@modelcontextprotocol/client`: Development-only client used for end-to-end protocol compatibility tests
 - `@modelcontextprotocol/inspector`: Run on demand with `npx` for testing and debugging MCP servers
 - `bring-shopping`: Node.js wrapper for the Bring! API
 - `zod`: For schema definition and validation

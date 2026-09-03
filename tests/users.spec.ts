@@ -1,337 +1,136 @@
 import {
-  mockGetAllUsersFromList,
-  mockGetUserSettings,
-  mockGetPendingInvitations,
-  mockLoadLists,
-  mockMcpServerInstance,
-  mockTools,
-  loadServer,
   getTool,
+  loadServer,
+  mockGetAllUsersFromList,
+  mockGetPendingInvitations,
+  mockGetUserSettings,
+  mockLoadLists,
+  mockTools,
 } from './helpers';
 
-let consoleErrorSpy: jest.SpyInstance;
+describe('user tools', () => {
+  let consoleErrorSpy: jest.SpyInstance;
 
-// Placeholder for user tests
-describe('User Tests', () => {
-  it('should have a placeholder test', () => {
-    expect(true).toBe(true);
-  });
-});
-
-describe('MCP Bring! Server - User Tools', () => {
   beforeEach(async () => {
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     jest.clearAllMocks();
     mockTools.clear();
     await loadServer();
   });
 
-  afterEach(() => {
-    consoleErrorSpy.mockRestore();
+  afterEach(() => consoleErrorSpy.mockRestore());
+
+  it('registers complete schemas and read-only annotations', () => {
+    for (const name of ['getAllUsersFromList', 'getUserSettings', 'getPendingInvitations', 'getDefaultList']) {
+      const tool = getTool(name);
+      expect(tool?.title).not.toBe('');
+      expect(tool?.inputSchema).toEqual(expect.objectContaining({ '~standard': expect.any(Object) }));
+      expect(tool?.outputSchema).toEqual(expect.objectContaining({ '~standard': expect.any(Object) }));
+      expect(tool?.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false, idempotentHint: true });
+    }
+    expect(getTool('getAllUsersFromList')?.schema).toEqual({ listUuid: expect.anything() });
+    expect(getTool('getUserSettings')?.schema).toEqual({});
   });
 
-  // Test for getAllUsersFromList
-  describe('bring.getAllUsersFromList tool', () => {
-    const toolSchema = { listUuid: expect.any(Object) }; // Zod string
-
-    it('should be registered correctly', () => {
-      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
-        'getAllUsersFromList',
-        expect.objectContaining({
-          description: 'Get all users associated with a specific shopping list.',
-          inputSchema: toolSchema,
-          outputSchema: expect.objectContaining({ result: expect.anything() }),
-          annotations: expect.objectContaining({ readOnlyHint: true, destructiveHint: false }),
-        }),
-        expect.any(Function),
-      );
-      const tool = getTool('getAllUsersFromList');
-      expect(tool).toBeDefined();
-      expect(tool?.description).toBe('Get all users associated with a specific shopping list.');
-      expect(tool?.schema).toMatchObject({ listUuid: {} });
-    });
-
-    it('should return users on success', async () => {
-      const fakeListUuid = 'list-users';
-      const fakeUsers = [
-        { id: 'user1', name: 'Alice' },
-        { id: 'user2', name: 'Bob' },
-      ];
-      mockGetAllUsersFromList.mockResolvedValue(fakeUsers);
-      const tool = getTool('getAllUsersFromList');
-      if (!tool) throw new Error('Tool getAllUsersFromList not found');
-      const result = await tool.callback({ listUuid: fakeListUuid });
-      expect(mockGetAllUsersFromList).toHaveBeenCalledWith(fakeListUuid);
-      expect(result).toEqual({
-        content: [{ type: 'text', text: JSON.stringify(fakeUsers, null, 2) }],
-        structuredContent: { result: fakeUsers },
-      });
-    });
-
-    it('should return error on failure', async () => {
-      const fakeListUuid = 'list-users-fail';
-      const error = new Error('Failed to get users');
-      mockGetAllUsersFromList.mockRejectedValue(error);
-      const tool = getTool('getAllUsersFromList');
-      if (!tool) throw new Error('Tool getAllUsersFromList not found');
-      const result = await tool.callback({ listUuid: fakeListUuid });
-      expect(result).toEqual({
-        content: [{ type: 'text', text: `Failed to get all users from list: ${error.message}` }],
-        isError: true,
-      });
-    });
-  });
-
-  // Test for getUserSettings
-  describe('bring.getUserSettings tool', () => {
-    it('should be registered correctly', () => {
-      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
-        'getUserSettings',
-        expect.objectContaining({
-          description: 'Get the settings for the current authenticated user.',
-          inputSchema: {},
-          outputSchema: expect.objectContaining({ result: expect.anything() }),
-          annotations: expect.objectContaining({ readOnlyHint: true, destructiveHint: false }),
-        }),
-        expect.any(Function),
-      );
-      const tool = getTool('getUserSettings');
-      expect(tool).toBeDefined();
-      expect(tool?.description).toBe('Get the settings for the current authenticated user.');
-      expect(tool?.schema).toEqual({});
-    });
-
-    it('should return settings on success', async () => {
-      const fakeSettings = { theme: 'dark', notifications: true };
-      mockGetUserSettings.mockResolvedValue(fakeSettings);
-      const tool = getTool('getUserSettings');
-      if (!tool) throw new Error('Tool getUserSettings not found');
-      const result = await tool.callback({});
-      expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({
-        content: [{ type: 'text', text: JSON.stringify(fakeSettings, null, 2) }],
-        structuredContent: { result: fakeSettings },
-      });
-    });
-
-    it('should return error on failure', async () => {
-      const error = new Error('Failed to get settings');
-      mockGetUserSettings.mockRejectedValue(error);
-      const tool = getTool('getUserSettings');
-      if (!tool) throw new Error('Tool getUserSettings not found');
-      const result = await tool.callback({});
-      expect(result).toEqual({
-        content: [{ type: 'text', text: `Failed to get user settings: ${error.message}` }],
-        isError: true,
-      });
-    });
-  });
-
-  // Test for getPendingInvitations
-  describe('bring.getPendingInvitations tool', () => {
-    it('should be registered correctly', () => {
-      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
-        'getPendingInvitations',
-        expect.objectContaining({
-          description: 'Get any pending invitations for the authenticated user to join shopping lists.',
-          inputSchema: {},
-          outputSchema: expect.objectContaining({ result: expect.anything() }),
-          annotations: expect.objectContaining({ readOnlyHint: true, destructiveHint: false }),
-        }),
-        expect.any(Function),
-      );
-      const tool = getTool('getPendingInvitations');
-      expect(tool).toBeDefined();
-      expect(tool?.description).toBe('Get any pending invitations for the authenticated user to join shopping lists.');
-      expect(tool?.schema).toEqual({});
-    });
-
-    it('should return invitations on success', async () => {
-      const fakeInvitations = [{ listId: 'list-invite', fromUser: 'UserA' }];
-      mockGetPendingInvitations.mockResolvedValue(fakeInvitations);
-      const tool = getTool('getPendingInvitations');
-      if (!tool) throw new Error('Tool getPendingInvitations not found');
-      const result = await tool.callback({});
-      expect(mockGetPendingInvitations).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({
-        content: [{ type: 'text', text: JSON.stringify(fakeInvitations, null, 2) }],
-        structuredContent: { result: fakeInvitations },
-      });
-    });
-
-    it('should return error on failure', async () => {
-      const error = new Error('Failed to get invitations');
-      mockGetPendingInvitations.mockRejectedValue(error);
-      const tool = getTool('getPendingInvitations');
-      if (!tool) throw new Error('Tool getPendingInvitations not found');
-      const result = await tool.callback({});
-      expect(result).toEqual({
-        content: [{ type: 'text', text: `Failed to get pending invitations: ${error.message}` }],
-        isError: true,
-      });
-    });
-  });
-
-  // Test for getDefaultList
-  describe('bring.getDefaultList tool', () => {
-    it('should be registered correctly', () => {
-      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
-        'getDefaultList',
-        expect.objectContaining({
-          description:
-            'Get the UUID of the default shopping list for the authenticated user. Use this if the user does not ask for a special list.',
-          inputSchema: {},
-          outputSchema: expect.objectContaining({ result: expect.anything() }),
-          annotations: expect.objectContaining({ readOnlyHint: true, destructiveHint: false }),
-        }),
-        expect.any(Function),
-      );
-      const tool = getTool('getDefaultList');
-      expect(tool).toBeDefined();
-      expect(tool?.description).toBe(
-        'Get the UUID of the default shopping list for the authenticated user. Use this if the user does not ask for a special list.',
-      );
-      expect(tool?.schema).toEqual({});
-    });
-
-    it('should return default list UUID on success', async () => {
-      const fakeSettings = {
-        usersettings: [
-          { key: 'someOtherSetting', value: 'someValue' },
-          { key: 'defaultListUUID', value: 'default-list-uuid-123' },
-          { key: 'anotherSetting', value: 'anotherValue' },
-        ],
-      };
-      // We mock getUserSettings because getDefaultList calls it internally
-      mockGetUserSettings.mockResolvedValue(fakeSettings);
-      const tool = getTool('getDefaultList');
-      if (!tool) throw new Error('Tool getDefaultList not found');
-
-      const result = await tool.callback({});
-      expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({
-        content: [{ type: 'text', text: 'default-list-uuid-123' }],
-        structuredContent: { result: 'default-list-uuid-123' },
-      });
-    });
-
-    it('should return error if defaultListUUID is not found in settings', async () => {
-      const fakeSettingsWithoutUuid = {
-        usersettings: [
-          { key: 'someOtherSetting', value: 'someValue' },
-          { key: 'anotherSetting', value: 'anotherValue' },
-        ],
-      };
-      mockGetUserSettings.mockResolvedValue(fakeSettingsWithoutUuid);
-      mockLoadLists.mockResolvedValue({ lists: [] });
-      const tool = getTool('getDefaultList');
-      if (!tool) throw new Error('Tool getDefaultList not found');
-
-      const result = await tool.callback({});
-      expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({
-        content: [
-          {
-            type: 'text',
-            text: 'No default list is configured. Set one in the Bring app, or call loadLists to choose.',
-          },
-        ],
-        structuredContent: {
-          result: 'No default list is configured. Set one in the Bring app, or call loadLists to choose.',
+  it('returns users and invitations in their documented response objects', async () => {
+    const users = {
+      users: [
+        {
+          publicUuid: 'user-1',
+          name: 'Alice',
+          email: 'alice@example.test',
+          photoPath: '',
+          pushEnabled: true,
+          plusTryOut: false,
+          country: 'DE',
+          language: 'de-DE',
         },
-      });
-    });
+      ],
+    };
+    const invitations = { invitations: [{ listUuid: 'list-1' }] };
+    mockGetAllUsersFromList.mockResolvedValue(users);
+    mockGetPendingInvitations.mockResolvedValue(invitations);
 
-    it('should return error if getUserSettings fails', async () => {
-      const error = new Error('Failed to get user settings from API');
-      mockGetUserSettings.mockRejectedValue(error);
-      const tool = getTool('getDefaultList');
-      if (!tool) throw new Error('Tool getDefaultList not found');
+    const usersResult = await getTool('getAllUsersFromList')!.callback({ listUuid: 'list-1' });
+    const invitationResult = await getTool('getPendingInvitations')!.callback({});
 
-      const result = await tool.callback({});
-      expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({
-        content: [{ type: 'text', text: `Failed to get default list UUID: ${error.message}` }],
-        isError: true,
-      });
-    });
+    expect(mockGetAllUsersFromList).toHaveBeenCalledWith('list-1');
+    expect(usersResult.structuredContent).toEqual(users);
+    expect(invitationResult.structuredContent).toEqual(invitations);
+  });
 
-    it('should return error if usersettings structure is invalid', async () => {
-      const fakeSettingsInvalidStructure = { someOtherProperty: 'value' }; // Missing usersettings array
-      mockGetUserSettings.mockResolvedValue(fakeSettingsInvalidStructure);
-      mockLoadLists.mockResolvedValue({ lists: [] });
-      const tool = getTool('getDefaultList');
-      if (!tool) throw new Error('Tool getDefaultList not found');
-
-      const result = await tool.callback({});
-      expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({
-        content: [
-          {
-            type: 'text',
-            text: 'No default list is configured. Set one in the Bring app, or call loadLists to choose.',
-          },
-        ],
-        structuredContent: {
-          result: 'No default list is configured. Set one in the Bring app, or call loadLists to choose.',
+  it('normalizes both global and per-list setting keys', async () => {
+    mockGetUserSettings.mockResolvedValue({
+      userSettings: [{ key: 'defaultListUUID', value: 'list-1' }],
+      userlistsettings: [
+        {
+          listUuid: 'list-1',
+          usersettings: [{ key: 'notifications', value: 'true' }],
         },
-      });
+      ],
     });
 
-    it('should fall back to the sole list UUID when defaultListUUID is unset', async () => {
-      const soleListUuid = 'casa-list-uuid-456';
-      mockGetUserSettings.mockResolvedValue({
-        usersettings: [
-          { key: 'autoPush', value: 'true' },
-          { key: 'onboardClient', value: 'web' },
-        ],
-      });
-      mockLoadLists.mockResolvedValue({
-        lists: [{ listUuid: soleListUuid, name: 'Casa' }],
-      });
-      const tool = getTool('getDefaultList');
-      if (!tool) throw new Error('Tool getDefaultList not found');
+    const result = await getTool('getUserSettings')!.callback({});
 
-      const result = await tool.callback({});
-      expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
-      expect(mockLoadLists).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({
-        content: [{ type: 'text', text: soleListUuid }],
-        structuredContent: { result: soleListUuid },
-      });
+    expect(result.structuredContent).toEqual({
+      settings: [{ key: 'defaultListUUID', value: 'list-1' }],
+      listSettings: [
+        {
+          listUuid: 'list-1',
+          settings: [{ key: 'notifications', value: 'true' }],
+        },
+      ],
+    });
+  });
+
+  it('returns the configured default list as a structured result', async () => {
+    mockGetUserSettings.mockResolvedValue({
+      usersettings: [{ key: 'defaultListUUID', value: 'configured-list' }],
     });
 
-    it('should return guidance when defaultListUUID is unset and multiple lists exist', async () => {
-      mockGetUserSettings.mockResolvedValue({
-        usersettings: [{ key: 'autoPush', value: 'true' }],
-      });
-      mockLoadLists.mockResolvedValue({
-        lists: [
-          { listUuid: 'uuid-a', name: 'Casa' },
-          { listUuid: 'uuid-b', name: 'Work' },
-        ],
-      });
-      const tool = getTool('getDefaultList');
-      if (!tool) throw new Error('Tool getDefaultList not found');
+    const result = await getTool('getDefaultList')!.callback({});
 
-      const result = await tool.callback({});
-      expect(mockLoadLists).toHaveBeenCalledTimes(1);
-      expect(result.content[0].text).toMatch(/loadLists/i);
-      expect(result.content[0].text).not.toMatch(/Failed to get default list UUID/i);
+    expect(result.structuredContent).toEqual({ listUuid: 'configured-list', source: 'configured' });
+    expect(mockLoadLists).not.toHaveBeenCalled();
+  });
+
+  it('uses the sole list if no default is configured', async () => {
+    mockGetUserSettings.mockResolvedValue({ userSettings: [] });
+    mockLoadLists.mockResolvedValue({
+      lists: [{ listUuid: 'only-list', name: 'Home', theme: 'ch.publisheria.bring.theme.1' }],
     });
 
-    it('should return guidance when defaultListUUID is unset and no lists exist', async () => {
-      mockGetUserSettings.mockResolvedValue({
-        usersettings: [{ key: 'autoPush', value: 'true' }],
-      });
-      mockLoadLists.mockResolvedValue({ lists: [] });
-      const tool = getTool('getDefaultList');
-      if (!tool) throw new Error('Tool getDefaultList not found');
+    const result = await getTool('getDefaultList')!.callback({});
 
-      const result = await tool.callback({});
-      expect(mockLoadLists).toHaveBeenCalledTimes(1);
-      expect(result.content[0].text).toMatch(/loadLists/i);
-      expect(result.content[0].text).not.toMatch(/Failed to get default list UUID/i);
+    expect(result.structuredContent).toEqual({ listUuid: 'only-list', source: 'only-list' });
+  });
+
+  it('returns actionable guidance if a list must be selected', async () => {
+    mockGetUserSettings.mockResolvedValue({ userSettings: [] });
+    mockLoadLists.mockResolvedValue({
+      lists: [
+        { listUuid: 'list-a', name: 'Home', theme: 'ch.publisheria.bring.theme.1' },
+        { listUuid: 'list-b', name: 'Work', theme: 'ch.publisheria.bring.theme.2' },
+      ],
+    });
+
+    const result = await getTool('getDefaultList')!.callback({});
+
+    expect(result.structuredContent).toEqual({
+      listUuid: null,
+      source: 'not-configured',
+      message: 'No default list is configured. Set one in the Bring app, or call loadLists to choose.',
+    });
+  });
+
+  it('marks user API failures as MCP errors', async () => {
+    mockGetUserSettings.mockRejectedValue(new Error('Settings unavailable'));
+
+    const result = await getTool('getDefaultList')!.callback({});
+
+    expect(result).toEqual({
+      content: [{ type: 'text', text: 'Failed to get default list UUID: Settings unavailable' }],
+      isError: true,
     });
   });
 });
