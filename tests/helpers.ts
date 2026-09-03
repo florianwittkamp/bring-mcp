@@ -77,20 +77,40 @@ jest.mock('../src/bringClient.js', () => {
 export interface McpTool {
   description: string;
   schema: Record<string, unknown>;
-  callback: (...args: Record<string, unknown>[]) => Promise<{ content: { type: string; text: string }[] }>;
+  outputSchema: Record<string, unknown>;
+  annotations: Record<string, unknown>;
+  callback: (...args: Record<string, unknown>[]) => Promise<{
+    content: { type: string; text: string }[];
+    structuredContent?: Record<string, unknown>;
+    isError?: boolean;
+  }>;
 }
 
 export const mockTools: Map<string, McpTool> = new Map();
 
 export const mockMcpServerInstance = {
-  tool: jest.fn(
+  registerTool: jest.fn(
     (
       name: string,
-      description: string,
-      schema: Record<string, unknown>,
-      callback: (...args: Record<string, unknown>[]) => Promise<{ content: { type: string; text: string }[] }>,
+      config: {
+        description?: string;
+        inputSchema?: Record<string, unknown>;
+        outputSchema?: Record<string, unknown>;
+        annotations?: Record<string, unknown>;
+      },
+      callback: (...args: Record<string, unknown>[]) => Promise<{
+        content: { type: string; text: string }[];
+        structuredContent?: Record<string, unknown>;
+        isError?: boolean;
+      }>,
     ) => {
-      mockTools.set(name, { description, schema, callback });
+      mockTools.set(name, {
+        description: config.description ?? '',
+        schema: config.inputSchema ?? {},
+        outputSchema: config.outputSchema ?? {},
+        annotations: config.annotations ?? {},
+        callback,
+      });
     },
   ),
   connect: jest.fn<() => Promise<void>>(),
@@ -105,8 +125,8 @@ jest.mock('dotenv/config', () => ({}));
 
 export async function loadServer() {
   jest.resetModules();
-  process.env.MAIL = 'test@example.com';
-  process.env.PW = 'testpassword';
+  process.env.BRING_EMAIL = 'test@example.com';
+  process.env.BRING_PASSWORD = 'testpassword';
   await import('../src/index.js');
 }
 
@@ -203,8 +223,8 @@ export function getTool(name: string): McpTool | undefined {
 //   jest.resetModules(); // Reset modules to ensure index.ts is re-evaluated
 
 //   // Set up process.env before index.ts is loaded
-//   process.env.MAIL = 'test@example.com';
-//   process.env.PW = 'testpassword';
+//   process.env.BRING_EMAIL = 'test@example.com';
+//   process.env.BRING_PASSWORD = 'testpassword';
 
 //   // Dynamically import index.ts AFTER mocks are set up
 //   // The path to index.js needs to be relative to this helpers.ts file,

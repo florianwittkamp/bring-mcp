@@ -28,10 +28,14 @@ describe('MCP Bring! Server - Item Tools', () => {
 
   describe('bring.getItems tool', () => {
     it('should be registered with correct name, description, and schema', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'getItems',
-        'Get all items from a specific shopping list.', // From src/index.ts
-        expect.objectContaining({ listUuid: expect.anything() }), // Adjusted schema check
+        expect.objectContaining({
+          description: 'Get all items from a specific shopping list.',
+          inputSchema: expect.objectContaining({ listUuid: expect.anything() }),
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: true, destructiveHint: false }),
+        }),
         expect.any(Function),
       );
       const tool = getTool('getItems');
@@ -55,6 +59,7 @@ describe('MCP Bring! Server - Item Tools', () => {
       expect(mockGetItems).toHaveBeenCalledWith(fakeListUuid);
       expect(result).toEqual({
         content: [{ type: 'text', text: JSON.stringify(fakeItemsExpectedByTool, null, 2) }],
+        structuredContent: { result: fakeItemsExpectedByTool },
       });
     });
 
@@ -114,16 +119,21 @@ describe('MCP Bring! Server - Item Tools', () => {
       expect(mockGetItems).toHaveBeenCalledWith(fakeListUuid);
       expect(result).toEqual({
         content: [{ type: 'text', text: `Failed to get items: ${errorMessage}` }],
+        isError: true,
       });
     });
   });
 
   describe('bring.getItemsDetails tool', () => {
     it('should be registered with correct name, description, and schema', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'getItemsDetails',
-        'Get details for items in a list. (Take listUuid)', // Corrected description
-        expect.objectContaining({ listUuid: expect.anything() }), // Adjusted schema check
+        expect.objectContaining({
+          description: 'Get details for items in a list. (Take listUuid)',
+          inputSchema: expect.objectContaining({ listUuid: expect.anything() }),
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: true, destructiveHint: false }),
+        }),
         expect.any(Function),
       );
       const tool = getTool('getItemsDetails');
@@ -145,6 +155,7 @@ describe('MCP Bring! Server - Item Tools', () => {
       expect(mockGetItemsDetails).toHaveBeenCalledWith(fakeListUuid); // Corrected: only expect listUuid
       expect(result).toEqual({
         content: [{ type: 'text', text: JSON.stringify(fakeItemDetails, null, 2) }],
+        structuredContent: { result: fakeItemDetails },
       });
     });
 
@@ -157,19 +168,27 @@ describe('MCP Bring! Server - Item Tools', () => {
       if (!tool) throw new Error('Tool getItemsDetails not found');
       const result = await tool.callback({ listUuid: fakeListUuid }); // Corrected: only pass listUuid
       expect(mockGetItemsDetails).toHaveBeenCalledWith(fakeListUuid); // Corrected: only expect listUuid
-      expect(result).toEqual({ content: [{ type: 'text', text: `Failed to get item details: ${errorMessage}` }] });
+      expect(result).toEqual({
+        content: [{ type: 'text', text: `Failed to get item details: ${errorMessage}` }],
+        isError: true,
+      });
     });
   });
 
   describe('bring.saveItem tool', () => {
     it('should be registered with correct name, description, and schema', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'saveItem',
-        'Save an item to a shopping list. Use the "specification" parameter to add details like quantity or type (e.g., itemName: "Milk", specification: "2 liters").',
         expect.objectContaining({
-          listUuid: expect.anything(),
-          itemName: expect.anything(),
-          specification: expect.anything(),
+          description:
+            'Save an item to a shopping list. Use the "specification" parameter to add details like quantity or type (e.g., itemName: "Milk", specification: "2 liters").',
+          inputSchema: expect.objectContaining({
+            listUuid: expect.anything(),
+            itemName: expect.anything(),
+            specification: expect.anything(),
+          }),
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: false, destructiveHint: true }),
         }),
         expect.any(Function),
       );
@@ -198,6 +217,7 @@ describe('MCP Bring! Server - Item Tools', () => {
       expect(mockSaveItem).toHaveBeenCalledWith(fakeListUuid, fakeItemName, fakeItemSpec);
       expect(result).toEqual({
         content: [{ type: 'text', text: `Item saved: ${JSON.stringify(savedItemConfirmation)}` }],
+        structuredContent: { result: savedItemConfirmation },
       });
     });
 
@@ -215,16 +235,23 @@ describe('MCP Bring! Server - Item Tools', () => {
         specification: fakeItemSpec,
       });
       expect(mockSaveItem).toHaveBeenCalledWith(fakeListUuid, fakeItemName, fakeItemSpec);
-      expect(result).toEqual({ content: [{ type: 'text', text: `Failed to save item: ${errorMessage}` }] });
+      expect(result).toEqual({
+        content: [{ type: 'text', text: `Failed to save item: ${errorMessage}` }],
+        isError: true,
+      });
     });
   });
 
   describe('bring.removeItem tool', () => {
     it('should be registered with correct name, description, and schema', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'removeItem',
-        'Remove an item from a specific shopping list.',
-        expect.objectContaining({ listUuid: expect.anything(), itemId: expect.anything() }),
+        expect.objectContaining({
+          description: 'Remove an item from a specific shopping list.',
+          inputSchema: expect.objectContaining({ listUuid: expect.anything(), itemId: expect.anything() }),
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: false, destructiveHint: true }),
+        }),
         expect.any(Function),
       );
       const tool = getTool('removeItem');
@@ -246,6 +273,7 @@ describe('MCP Bring! Server - Item Tools', () => {
       expect(mockRemoveItem).toHaveBeenCalledWith(fakeListUuid, fakeItemId);
       expect(result).toEqual({
         content: [{ type: 'text', text: JSON.stringify(successResponse, null, 2) }],
+        structuredContent: { result: successResponse },
       });
     });
 
@@ -262,16 +290,21 @@ describe('MCP Bring! Server - Item Tools', () => {
       expect(mockRemoveItem).toHaveBeenCalledWith(fakeListUuid, fakeItemId);
       expect(result).toEqual({
         content: [{ type: 'text', text: `Failed to remove item: ${errorMessage}` }],
+        isError: true,
       });
     });
   });
 
   describe('bring.moveToRecentList tool', () => {
     it('should be registered with correct name, description, and schema', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'moveToRecentList',
-        'Move an item from a shopping list to the recently used items list.',
-        expect.objectContaining({ listUuid: expect.anything(), itemId: expect.anything() }),
+        expect.objectContaining({
+          description: 'Move an item from a shopping list to the recently used items list.',
+          inputSchema: expect.objectContaining({ listUuid: expect.anything(), itemId: expect.anything() }),
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: false, destructiveHint: true }),
+        }),
         expect.any(Function),
       );
       const tool = getTool('moveToRecentList');
@@ -293,6 +326,7 @@ describe('MCP Bring! Server - Item Tools', () => {
       expect(mockMoveToRecentList).toHaveBeenCalledWith(fakeListUuid, fakeItemId);
       expect(result).toEqual({
         content: [{ type: 'text', text: JSON.stringify(successResponse, null, 2) }],
+        structuredContent: { result: successResponse },
       });
     });
 
@@ -309,16 +343,22 @@ describe('MCP Bring! Server - Item Tools', () => {
       expect(mockMoveToRecentList).toHaveBeenCalledWith(fakeListUuid, fakeItemId);
       expect(result).toEqual({
         content: [{ type: 'text', text: `Failed to move item to recent list: ${errorMessage}` }],
+        isError: true,
       });
     });
   });
 
   describe('bring.saveItemBatch tool', () => {
     it('should be registered with correct name, description, and schema', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'saveItemBatch',
-        'Save multiple items to a shopping list. For each item, you can provide an "itemName" and an optional "specification" for details like quantity or type (input e.g., [{ "itemName": "Eggs", "specification": "dozen" },{ "itemName":"Apples", "specification": "10" }]).',
-        expect.objectContaining({ listUuid: expect.anything(), items: expect.anything() }),
+        expect.objectContaining({
+          description:
+            'Save multiple items to a shopping list. For each item, you can provide an "itemName" and an optional "specification" for details like quantity or type (input e.g., [{ "itemName": "Eggs", "specification": "dozen" },{ "itemName":"Apples", "specification": "10" }]).',
+          inputSchema: expect.objectContaining({ listUuid: expect.anything(), items: expect.anything() }),
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: false, destructiveHint: true }),
+        }),
         expect.any(Function),
       );
       const tool = getTool('saveItemBatch');
@@ -346,6 +386,7 @@ describe('MCP Bring! Server - Item Tools', () => {
       expect(mockSaveItemBatch).toHaveBeenCalledWith(fakeListUuid, fakeItems);
       expect(result).toEqual({
         content: [{ type: 'text', text: `Batch items saved: ${JSON.stringify(successResponse)}` }],
+        structuredContent: { result: successResponse },
       });
     });
 
@@ -362,6 +403,7 @@ describe('MCP Bring! Server - Item Tools', () => {
       expect(mockSaveItemBatch).toHaveBeenCalledWith(fakeListUuid, fakeItems);
       expect(result).toEqual({
         content: [{ type: 'text', text: `Failed to save batch items: ${errorMessage}` }],
+        isError: true,
       });
     });
   });
@@ -371,10 +413,14 @@ describe('MCP Bring! Server - Item Tools', () => {
     const itemNamesToDelete = ['ItemA', 'ItemB'];
 
     it('should be registered with correct name, description, and schema', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'deleteMultipleItemsFromList',
-        'Delete multiple items from a specific shopping list by their names.',
-        expect.objectContaining({ listUuid: expect.anything(), itemNames: expect.anything() }),
+        expect.objectContaining({
+          description: 'Delete multiple items from a specific shopping list by their names.',
+          inputSchema: expect.objectContaining({ listUuid: expect.anything(), itemNames: expect.anything() }),
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: false, destructiveHint: true }),
+        }),
         expect.any(Function),
       );
       const tool = getTool('deleteMultipleItemsFromList');
@@ -405,6 +451,7 @@ describe('MCP Bring! Server - Item Tools', () => {
       // Uses transformResult from itemTools.ts
       expect(result).toEqual({
         content: [{ type: 'text', text: `Multiple items deleted: ${JSON.stringify(mockSuccessResponse)}` }],
+        structuredContent: { result: mockSuccessResponse },
       });
     });
 
@@ -422,6 +469,7 @@ describe('MCP Bring! Server - Item Tools', () => {
 
       expect(result).toEqual({
         content: [{ type: 'text', text: `Failed to delete multiple items: ${errorMessage}` }],
+        isError: true,
       });
     });
   });

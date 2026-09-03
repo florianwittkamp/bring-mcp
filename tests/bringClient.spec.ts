@@ -32,8 +32,8 @@ let sentBodies: string[] = [];
 describe('BringClient functionality', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.MAIL = 'test@example.com';
-    process.env.PW = 'pw';
+    process.env.BRING_EMAIL = 'test@example.com';
+    process.env.BRING_PASSWORD = 'pw';
     // saveItem/removeItem/moveToRecentList now build their own escaped form
     // body instead of delegating to bring-shopping, so the suite has to stub
     // fetch. Without this these tests reach api.getbring.com for real and fail

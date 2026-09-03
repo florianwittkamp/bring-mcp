@@ -30,12 +30,17 @@ describe('MCP Bring! Server - Image Tools', () => {
     });
 
     it('should be registered with correct name, description, and schema', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'saveItemImage',
-        'Save an image for an item. Provide the image as base64-encoded data (maximum decoded size: 5 MiB).',
         expect.objectContaining({
-          itemId: expect.anything(),
-          imageData: expect.anything(),
+          description:
+            'Save an image for an item. Provide the image as base64-encoded data (maximum decoded size: 5 MiB).',
+          inputSchema: expect.objectContaining({
+            itemId: expect.anything(),
+            imageData: expect.anything(),
+          }),
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: false, destructiveHint: true }),
         }),
         expect.any(Function),
       );
@@ -45,6 +50,7 @@ describe('MCP Bring! Server - Image Tools', () => {
         'Save an image for an item. Provide the image as base64-encoded data (maximum decoded size: 5 MiB).',
       );
       expect(tool?.schema).toMatchObject({ itemId: {}, imageData: {} });
+      expect(tool?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
     });
 
     it('should call BringClient.saveItemImage and return success', async () => {
@@ -56,7 +62,10 @@ describe('MCP Bring! Server - Image Tools', () => {
       if (!tool) throw new Error('Tool saveItemImage not found');
       const result = await tool.callback({ itemId: fakeItemId, imageData: fakeImageData });
       expect(mockSaveItemImage).toHaveBeenCalledWith(fakeItemId, fakeImageData);
-      expect(result).toEqual({ content: [{ type: 'text', text: JSON.stringify(successResponse, null, 2) }] });
+      expect(result).toEqual({
+        content: [{ type: 'text', text: JSON.stringify(successResponse, null, 2) }],
+        structuredContent: { result: successResponse },
+      });
     });
 
     it('should return an error message on failed saveItemImage', async () => {
@@ -68,16 +77,23 @@ describe('MCP Bring! Server - Image Tools', () => {
       if (!tool) throw new Error('Tool saveItemImage not found');
       const result = await tool.callback({ itemId: fakeItemId, imageData: fakeImageData });
       expect(mockSaveItemImage).toHaveBeenCalledWith(fakeItemId, fakeImageData);
-      expect(result).toEqual({ content: [{ type: 'text', text: `Failed to save item image: ${errorMessage}` }] });
+      expect(result).toEqual({
+        content: [{ type: 'text', text: `Failed to save item image: ${errorMessage}` }],
+        isError: true,
+      });
     });
   });
 
   describe('bring.removeItemImage tool', () => {
     it('should be registered with correct name, description, and schema', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'removeItemImage',
-        'Remove an image from an item on a shopping list.',
-        expect.objectContaining({ itemId: expect.anything() }),
+        expect.objectContaining({
+          description: 'Remove an image from an item on a shopping list.',
+          inputSchema: expect.objectContaining({ itemId: expect.anything() }),
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: false, destructiveHint: true }),
+        }),
         expect.any(Function),
       );
       const tool = getTool('removeItemImage');
@@ -94,7 +110,10 @@ describe('MCP Bring! Server - Image Tools', () => {
       if (!tool) throw new Error('Tool removeItemImage not found');
       const result = await tool.callback({ itemId: fakeItemId });
       expect(mockRemoveItemImage).toHaveBeenCalledWith(fakeItemId);
-      expect(result).toEqual({ content: [{ type: 'text', text: JSON.stringify(successResponse, null, 2) }] });
+      expect(result).toEqual({
+        content: [{ type: 'text', text: JSON.stringify(successResponse, null, 2) }],
+        structuredContent: { result: successResponse },
+      });
     });
 
     it('should return an error message on failed removeItemImage', async () => {
@@ -105,7 +124,10 @@ describe('MCP Bring! Server - Image Tools', () => {
       if (!tool) throw new Error('Tool removeItemImage not found');
       const result = await tool.callback({ itemId: fakeItemId });
       expect(mockRemoveItemImage).toHaveBeenCalledWith(fakeItemId);
-      expect(result).toEqual({ content: [{ type: 'text', text: `Failed to remove item image: ${errorMessage}` }] });
+      expect(result).toEqual({
+        content: [{ type: 'text', text: `Failed to remove item image: ${errorMessage}` }],
+        isError: true,
+      });
     });
   });
 });

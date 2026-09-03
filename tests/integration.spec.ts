@@ -45,8 +45,8 @@ describe('MCP Bring! Server - Integration Tests (Main Entry Point)', () => {
   });
 
   it('should initialize StdioServerTransport and connect McpServer when env vars are set', async () => {
-    process.env.MAIL = 'test@example.com';
-    process.env.PW = 'password';
+    process.env.BRING_EMAIL = 'test@example.com';
+    process.env.BRING_PASSWORD = 'password';
 
     // Dynamically import to trigger script execution
     await import('../src/index.js');
@@ -60,43 +60,53 @@ describe('MCP Bring! Server - Integration Tests (Main Entry Point)', () => {
     expect(mockExit).not.toHaveBeenCalled();
   });
 
-  it('should log an error and exit if MAIL environment variable is missing', async () => {
-    delete process.env.MAIL; // MAIL is missing
-    process.env.PW = 'password';
+  it('should log an error and exit if BRING_EMAIL and its legacy alias are missing', async () => {
+    delete process.env.BRING_EMAIL;
+    delete process.env.MAIL;
+    process.env.BRING_PASSWORD = 'password';
 
     await import('../src/index.js');
 
-    expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('Missing MAIL or PW environment variables'));
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('Missing BRING_EMAIL or BRING_PASSWORD environment variables'),
+    );
     expect(mockExit).toHaveBeenCalledWith(1);
     expect(mockMcpServerInstance.connect).not.toHaveBeenCalled();
   });
 
-  it('should log an error and exit if PW environment variable is missing', async () => {
-    process.env.MAIL = 'test@example.com';
-    delete process.env.PW; // PW is missing
+  it('should log an error and exit if BRING_PASSWORD and its legacy alias are missing', async () => {
+    process.env.BRING_EMAIL = 'test@example.com';
+    delete process.env.BRING_PASSWORD;
+    delete process.env.PW;
 
     await import('../src/index.js');
 
-    expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('Missing MAIL or PW environment variables'));
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('Missing BRING_EMAIL or BRING_PASSWORD environment variables'),
+    );
     expect(mockExit).toHaveBeenCalledWith(1);
     expect(mockMcpServerInstance.connect).not.toHaveBeenCalled();
   });
 
-  it('should log an error and exit if both MAIL and PW environment variables are missing', async () => {
+  it('should log an error and exit if all supported credential environment variables are missing', async () => {
+    delete process.env.BRING_EMAIL;
+    delete process.env.BRING_PASSWORD;
     delete process.env.MAIL;
     delete process.env.PW;
 
     await import('../src/index.js');
 
-    expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('Missing MAIL or PW environment variables'));
+    expect(mockConsoleError).toHaveBeenCalledWith(
+      expect.stringContaining('Missing BRING_EMAIL or BRING_PASSWORD environment variables'),
+    );
     expect(mockExit).toHaveBeenCalledWith(1);
     expect(mockMcpServerInstance.connect).not.toHaveBeenCalled();
   });
 
   // Test the catch block of main
   it('should log fatal error and exit if server.connect throws', async () => {
-    process.env.MAIL = 'test@example.com';
-    process.env.PW = 'password';
+    process.env.BRING_EMAIL = 'test@example.com';
+    process.env.BRING_PASSWORD = 'password';
 
     const connectError = new Error('Connection failed');
     mockMcpServerInstance.connect.mockRejectedValueOnce(connectError);
@@ -106,6 +116,18 @@ describe('MCP Bring! Server - Integration Tests (Main Entry Point)', () => {
     expect(mockMcpServerInstance.connect).toHaveBeenCalledTimes(1);
     expect(mockConsoleError).toHaveBeenCalledWith('Fatal error starting MCP server:', connectError);
     expect(mockExit).toHaveBeenCalledWith(1);
+  });
+
+  it('should support MAIL and PW as deprecated aliases', async () => {
+    delete process.env.BRING_EMAIL;
+    delete process.env.BRING_PASSWORD;
+    process.env.MAIL = 'legacy@example.com';
+    process.env.PW = 'legacy-password';
+
+    await import('../src/index.js');
+
+    expect(mockMcpServerInstance.connect).toHaveBeenCalledTimes(1);
+    expect(mockConsoleError).toHaveBeenCalledWith(expect.stringContaining('Deprecation warning'));
   });
 
   const expectedToolNames = [
@@ -128,19 +150,28 @@ describe('MCP Bring! Server - Integration Tests (Main Entry Point)', () => {
   ];
 
   it('should register all expected tools on McpServer', async () => {
-    process.env.MAIL = 'test@example.com';
-    process.env.PW = 'password';
+    process.env.BRING_EMAIL = 'test@example.com';
+    process.env.BRING_PASSWORD = 'password';
 
     await import('../src/index.js');
 
-    expect(mockMcpServerInstance.tool).toHaveBeenCalledTimes(expectedToolNames.length);
+    expect(mockMcpServerInstance.registerTool).toHaveBeenCalledTimes(expectedToolNames.length);
 
     for (const toolName of expectedToolNames) {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         toolName,
-        expect.any(String), // description
-        expect.any(Object), // schema
-        expect.any(Function), // callback
+        expect.objectContaining({
+          description: expect.any(String),
+          inputSchema: expect.any(Object),
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({
+            readOnlyHint: expect.any(Boolean),
+            destructiveHint: expect.any(Boolean),
+            idempotentHint: expect.any(Boolean),
+            openWorldHint: true,
+          }),
+        }),
+        expect.any(Function),
       );
     }
   });
