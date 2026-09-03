@@ -1,9 +1,19 @@
 import Bring from 'bring-shopping';
 
 export class BringClient {
-  private bring = new Bring({ mail: process.env.MAIL!, password: process.env.PW! });
+  private bring: Bring;
   private isLoggedIn = false;
   private tokenExpiresAt: Date | undefined;
+
+  constructor(
+    email = process.env.BRING_EMAIL ?? process.env.MAIL,
+    password = process.env.BRING_PASSWORD ?? process.env.PW,
+  ) {
+    if (!email || !password) {
+      throw new Error('Missing BRING_EMAIL or BRING_PASSWORD environment variables.');
+    }
+    this.bring = new Bring({ mail: email, password });
+  }
 
   private async _login() {
     try {

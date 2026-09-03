@@ -24,8 +24,8 @@ To use this server in Claude Desktop via `npx`, insert the following into your `
       "command": "npx",
       "args": ["-y", "bring-mcp@latest"],
       "env": {
-        "MAIL": "your_bring_email@example.com",
-        "PW": "YOUR_BRING_PASSWORD_HERE"
+        "BRING_EMAIL": "your_bring_email@example.com",
+        "BRING_PASSWORD": "YOUR_BRING_PASSWORD_HERE"
       }
     }
   }
@@ -91,8 +91,8 @@ This is the recommended and most portable configuration. It ensures you always u
 4. **Create `.env` file (if not injecting ENV directly):**
 
    ```env
-   MAIL=your_email@example.com
-   PW=your_password
+   BRING_EMAIL=your_email@example.com
+   BRING_PASSWORD=your_password
    ```
 
 5. **Build the project:**
@@ -144,8 +144,8 @@ Alternatively, if you prefer a locally built and installed version:
       "command": "node",
       "args": ["/ABSOLUTE/PATH/TO/bring-mcp/build/src/index.js"],
       "env": {
-        "MAIL": "your_bring_email@example.com",
-        "PW": "YOUR_BRING_PASSWORD_HERE"
+        "BRING_EMAIL": "your_bring_email@example.com",
+        "BRING_PASSWORD": "YOUR_BRING_PASSWORD_HERE"
       }
     }
   }
@@ -193,6 +193,7 @@ npm run build
 ## ✅ Final Notes
 
 - 🔒 Avoid committing your `.env` file.
+- ♻️ `MAIL` and `PW` remain supported as deprecated aliases for existing installations.
 - 🧼 Keep credentials out of version control.
 - 🛠 MCP Inspector is invaluable for debugging.
 - 🔄 Authentication is handled automatically - no manual login required.

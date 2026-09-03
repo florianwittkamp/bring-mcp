@@ -2,6 +2,7 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
 import { z, ZodRawShape, ZodObject } from 'zod';
 import { BringClient } from './bringClient.js';
 import 'dotenv/config';
@@ -29,9 +30,17 @@ function textToolResult(text: string) {
 
 // Helper function to create a JSON response (as stringified text)
 function jsonToolResult(data: unknown) {
-  const contentPart: McpContentPart = { type: 'text', text: JSON.stringify(data, null, 2) };
+  const contentPart: McpContentPart = { type: 'text', text: JSON.stringify(data, null, 2) ?? 'null' };
   return { content: [contentPart] };
 }
+
+function structuredToolResult(data: unknown) {
+  return { result: data === undefined ? null : data };
+}
+
+const outputSchema = {
+  result: z.unknown().describe('The structured result returned by the Bring! API operation.'),
+};
 
 // Generic tool registration helper - Overloads
 export function registerTool<TParams extends ZodRawShape, TResult, TArgs = z.infer<ZodObject<TParams>>>(options: {
@@ -43,6 +52,7 @@ export function registerTool<TParams extends ZodRawShape, TResult, TArgs = z.inf
   actionFn: (args: TArgs, bc: BringClient) => Promise<TResult>;
   transformResult?: (result: TResult) => { content: McpContentPart[] };
   failureMessage: string;
+  annotations: ToolAnnotations;
 }): void;
 export function registerTool<TResult>(options: {
   server: McpServer;
@@ -53,6 +63,7 @@ export function registerTool<TResult>(options: {
   actionFn: (args: undefined, bc: BringClient) => Promise<TResult>; // Args are undefined
   transformResult?: (result: TResult) => { content: McpContentPart[] };
   failureMessage: string;
+  annotations: ToolAnnotations;
 }): void;
 // Implementation signature for registerTool
 export function registerTool(options: {
@@ -66,44 +77,69 @@ export function registerTool(options: {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   transformResult?: (result: any) => { content: McpContentPart[] };
   failureMessage: string;
+  annotations: ToolAnnotations;
 }) {
-  const { server, bc, name, description, schemaShape, actionFn, transformResult, failureMessage } = options;
+  const { server, bc, name, description, schemaShape, actionFn, transformResult, failureMessage, annotations } =
+    options;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const callback = async (args: any) => {
     try {
       const res = await actionFn(args, bc);
       if (transformResult) {
-        return transformResult(res);
+        return {
+          ...transformResult(res),
+          structuredContent: structuredToolResult(res),
+        };
       }
-      return jsonToolResult(res);
+      return {
+        ...jsonToolResult(res),
+        structuredContent: structuredToolResult(res),
+      };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`${failureMessage}:`, error);
-      return textToolResult(`${failureMessage}: ${errorMessage}`);
+      return {
+        ...textToolResult(`${failureMessage}: ${errorMessage}`),
+        isError: true,
+      };
     }
   };
 
-  if (schemaShape) {
-    server.tool(name, description, schemaShape, callback);
-  } else {
-    server.tool(name, description, {}, callback);
-  }
+  server.registerTool(
+    name,
+    {
+      description,
+      inputSchema: schemaShape ?? {},
+      outputSchema,
+      annotations,
+    },
+    callback,
+  );
 }
 
 // Register login tool and other tools moved into main
 
 // Start the server
 async function main() {
-  if (!process.env.MAIL || !process.env.PW) {
+  const email = process.env.BRING_EMAIL ?? process.env.MAIL;
+  const password = process.env.BRING_PASSWORD ?? process.env.PW;
+
+  if (!email || !password) {
     console.error(
-      'Missing MAIL or PW environment variables. Please create a .env file with your Bring credentials (e.g., MAIL=your_email@example.com\nPW=your_password).',
+      'Missing BRING_EMAIL or BRING_PASSWORD environment variables. Please provide your Bring! credentials through the environment or a .env file.',
     );
     process.exit(1);
     return;
   }
 
-  const bc = new BringClient(); // Instantiated after env check
+  if (!process.env.BRING_EMAIL || !process.env.BRING_PASSWORD) {
+    console.error(
+      'Deprecation warning: MAIL and PW are legacy aliases. Please migrate to BRING_EMAIL and BRING_PASSWORD.',
+    );
+  }
+
+  const bc = new BringClient(email, password); // Instantiated after env check
 
   // Register tools from modules
   registerListTools(server, bc);

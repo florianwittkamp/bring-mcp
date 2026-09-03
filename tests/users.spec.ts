@@ -35,10 +35,14 @@ describe('MCP Bring! Server - User Tools', () => {
     const toolSchema = { listUuid: expect.any(Object) }; // Zod string
 
     it('should be registered correctly', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'getAllUsersFromList',
-        'Get all users associated with a specific shopping list.',
-        toolSchema,
+        expect.objectContaining({
+          description: 'Get all users associated with a specific shopping list.',
+          inputSchema: toolSchema,
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: true, destructiveHint: false }),
+        }),
         expect.any(Function),
       );
       const tool = getTool('getAllUsersFromList');
@@ -58,7 +62,10 @@ describe('MCP Bring! Server - User Tools', () => {
       if (!tool) throw new Error('Tool getAllUsersFromList not found');
       const result = await tool.callback({ listUuid: fakeListUuid });
       expect(mockGetAllUsersFromList).toHaveBeenCalledWith(fakeListUuid);
-      expect(result).toEqual({ content: [{ type: 'text', text: JSON.stringify(fakeUsers, null, 2) }] });
+      expect(result).toEqual({
+        content: [{ type: 'text', text: JSON.stringify(fakeUsers, null, 2) }],
+        structuredContent: { result: fakeUsers },
+      });
     });
 
     it('should return error on failure', async () => {
@@ -70,6 +77,7 @@ describe('MCP Bring! Server - User Tools', () => {
       const result = await tool.callback({ listUuid: fakeListUuid });
       expect(result).toEqual({
         content: [{ type: 'text', text: `Failed to get all users from list: ${error.message}` }],
+        isError: true,
       });
     });
   });
@@ -77,10 +85,14 @@ describe('MCP Bring! Server - User Tools', () => {
   // Test for getUserSettings
   describe('bring.getUserSettings tool', () => {
     it('should be registered correctly', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'getUserSettings',
-        'Get the settings for the current authenticated user.',
-        {},
+        expect.objectContaining({
+          description: 'Get the settings for the current authenticated user.',
+          inputSchema: {},
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: true, destructiveHint: false }),
+        }),
         expect.any(Function),
       );
       const tool = getTool('getUserSettings');
@@ -96,7 +108,10 @@ describe('MCP Bring! Server - User Tools', () => {
       if (!tool) throw new Error('Tool getUserSettings not found');
       const result = await tool.callback({});
       expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({ content: [{ type: 'text', text: JSON.stringify(fakeSettings, null, 2) }] });
+      expect(result).toEqual({
+        content: [{ type: 'text', text: JSON.stringify(fakeSettings, null, 2) }],
+        structuredContent: { result: fakeSettings },
+      });
     });
 
     it('should return error on failure', async () => {
@@ -105,17 +120,24 @@ describe('MCP Bring! Server - User Tools', () => {
       const tool = getTool('getUserSettings');
       if (!tool) throw new Error('Tool getUserSettings not found');
       const result = await tool.callback({});
-      expect(result).toEqual({ content: [{ type: 'text', text: `Failed to get user settings: ${error.message}` }] });
+      expect(result).toEqual({
+        content: [{ type: 'text', text: `Failed to get user settings: ${error.message}` }],
+        isError: true,
+      });
     });
   });
 
   // Test for getPendingInvitations
   describe('bring.getPendingInvitations tool', () => {
     it('should be registered correctly', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'getPendingInvitations',
-        'Get any pending invitations for the authenticated user to join shopping lists.',
-        {},
+        expect.objectContaining({
+          description: 'Get any pending invitations for the authenticated user to join shopping lists.',
+          inputSchema: {},
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: true, destructiveHint: false }),
+        }),
         expect.any(Function),
       );
       const tool = getTool('getPendingInvitations');
@@ -131,7 +153,10 @@ describe('MCP Bring! Server - User Tools', () => {
       if (!tool) throw new Error('Tool getPendingInvitations not found');
       const result = await tool.callback({});
       expect(mockGetPendingInvitations).toHaveBeenCalledTimes(1);
-      expect(result).toEqual({ content: [{ type: 'text', text: JSON.stringify(fakeInvitations, null, 2) }] });
+      expect(result).toEqual({
+        content: [{ type: 'text', text: JSON.stringify(fakeInvitations, null, 2) }],
+        structuredContent: { result: fakeInvitations },
+      });
     });
 
     it('should return error on failure', async () => {
@@ -142,6 +167,7 @@ describe('MCP Bring! Server - User Tools', () => {
       const result = await tool.callback({});
       expect(result).toEqual({
         content: [{ type: 'text', text: `Failed to get pending invitations: ${error.message}` }],
+        isError: true,
       });
     });
   });
@@ -149,10 +175,15 @@ describe('MCP Bring! Server - User Tools', () => {
   // Test for getDefaultList
   describe('bring.getDefaultList tool', () => {
     it('should be registered correctly', () => {
-      expect(mockMcpServerInstance.tool).toHaveBeenCalledWith(
+      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
         'getDefaultList',
-        'Get the UUID of the default shopping list for the authenticated user. Use this if the user does not ask for a special list.',
-        {}, // No schema for this tool
+        expect.objectContaining({
+          description:
+            'Get the UUID of the default shopping list for the authenticated user. Use this if the user does not ask for a special list.',
+          inputSchema: {},
+          outputSchema: expect.objectContaining({ result: expect.anything() }),
+          annotations: expect.objectContaining({ readOnlyHint: true, destructiveHint: false }),
+        }),
         expect.any(Function),
       );
       const tool = getTool('getDefaultList');
@@ -180,6 +211,7 @@ describe('MCP Bring! Server - User Tools', () => {
       expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
       expect(result).toEqual({
         content: [{ type: 'text', text: 'default-list-uuid-123' }],
+        structuredContent: { result: 'default-list-uuid-123' },
       });
     });
 
@@ -204,6 +236,9 @@ describe('MCP Bring! Server - User Tools', () => {
             text: 'No default list is configured. Set one in the Bring app, or call loadLists to choose.',
           },
         ],
+        structuredContent: {
+          result: 'No default list is configured. Set one in the Bring app, or call loadLists to choose.',
+        },
       });
     });
 
@@ -217,6 +252,7 @@ describe('MCP Bring! Server - User Tools', () => {
       expect(mockGetUserSettings).toHaveBeenCalledTimes(1);
       expect(result).toEqual({
         content: [{ type: 'text', text: `Failed to get default list UUID: ${error.message}` }],
+        isError: true,
       });
     });
 
@@ -236,6 +272,9 @@ describe('MCP Bring! Server - User Tools', () => {
             text: 'No default list is configured. Set one in the Bring app, or call loadLists to choose.',
           },
         ],
+        structuredContent: {
+          result: 'No default list is configured. Set one in the Bring app, or call loadLists to choose.',
+        },
       });
     });
 
@@ -258,6 +297,7 @@ describe('MCP Bring! Server - User Tools', () => {
       expect(mockLoadLists).toHaveBeenCalledTimes(1);
       expect(result).toEqual({
         content: [{ type: 'text', text: soleListUuid }],
+        structuredContent: { result: soleListUuid },
       });
     });
 

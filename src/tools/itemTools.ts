@@ -11,6 +11,7 @@ import {
   saveItemBatchParams,
   itemNamesArrayParam,
 } from '../schemaShared.js';
+import { MUTATING_TOOL_ANNOTATIONS, READ_ONLY_TOOL_ANNOTATIONS } from '../toolAnnotations.js';
 
 export function registerItemTools(server: McpServer, bc: BringClient) {
   const getItemsParams = z.object({
@@ -24,6 +25,7 @@ export function registerItemTools(server: McpServer, bc: BringClient) {
     schemaShape: getItemsParams.shape,
     actionFn: async (args: z.infer<typeof getItemsParams>, bc: BringClient) => bc.getItems(args.listUuid),
     failureMessage: 'Failed to get items',
+    annotations: READ_ONLY_TOOL_ANNOTATIONS,
   });
 
   const getItemsDetailsParams = z.object({
@@ -37,6 +39,7 @@ export function registerItemTools(server: McpServer, bc: BringClient) {
     schemaShape: getItemsDetailsParams.shape,
     actionFn: async (args: z.infer<typeof getItemsDetailsParams>, bc: BringClient) => bc.getItemsDetails(args.listUuid),
     failureMessage: 'Failed to get item details',
+    annotations: READ_ONLY_TOOL_ANNOTATIONS,
   });
 
   registerTool({
@@ -53,6 +56,7 @@ export function registerItemTools(server: McpServer, bc: BringClient) {
       content: [{ type: 'text', text: `Item saved: ${JSON.stringify(result)}` }],
     }),
     failureMessage: 'Failed to save item',
+    annotations: MUTATING_TOOL_ANNOTATIONS,
   });
 
   registerTool({
@@ -69,6 +73,7 @@ export function registerItemTools(server: McpServer, bc: BringClient) {
       content: [{ type: 'text', text: `Batch items saved: ${JSON.stringify(result)}` }],
     }),
     failureMessage: 'Failed to save batch items',
+    annotations: MUTATING_TOOL_ANNOTATIONS,
   });
 
   const removeItemParams = z.object({
@@ -84,6 +89,7 @@ export function registerItemTools(server: McpServer, bc: BringClient) {
     actionFn: async (args: z.infer<typeof removeItemParams>, bc: BringClient) =>
       bc.removeItem(args.listUuid, args.itemId),
     failureMessage: 'Failed to remove item',
+    annotations: MUTATING_TOOL_ANNOTATIONS,
   });
 
   const moveToRecentListParams = z.object({
@@ -99,6 +105,7 @@ export function registerItemTools(server: McpServer, bc: BringClient) {
     actionFn: async (args: z.infer<typeof moveToRecentListParams>, bc: BringClient) =>
       bc.moveToRecentList(args.listUuid, args.itemId),
     failureMessage: 'Failed to move item to recent list',
+    annotations: MUTATING_TOOL_ANNOTATIONS,
   });
 
   const saveItemImageParams = z.object({
@@ -114,6 +121,7 @@ export function registerItemTools(server: McpServer, bc: BringClient) {
     actionFn: async (args: z.infer<typeof saveItemImageParams>, bc: BringClient) =>
       bc.saveItemImage(args.itemId, args.imageData),
     failureMessage: 'Failed to save item image',
+    annotations: MUTATING_TOOL_ANNOTATIONS,
   });
 
   const removeItemImageParams = z.object({
@@ -127,6 +135,7 @@ export function registerItemTools(server: McpServer, bc: BringClient) {
     schemaShape: removeItemImageParams.shape,
     actionFn: async (args: z.infer<typeof removeItemImageParams>, bc: BringClient) => bc.removeItemImage(args.itemId),
     failureMessage: 'Failed to remove item image',
+    annotations: MUTATING_TOOL_ANNOTATIONS,
   });
 
   const deleteMultipleItemsParams = z.object({
@@ -145,5 +154,6 @@ export function registerItemTools(server: McpServer, bc: BringClient) {
       content: [{ type: 'text', text: `Multiple items deleted: ${JSON.stringify(result)}` }],
     }),
     failureMessage: 'Failed to delete multiple items',
+    annotations: MUTATING_TOOL_ANNOTATIONS,
   });
 }

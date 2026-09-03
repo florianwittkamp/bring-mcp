@@ -27,8 +27,8 @@ let sent: { url: string; body: string }[] = [];
 describe('legacy list mutation encoding', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.MAIL = 'test@example.com';
-    process.env.PW = 'pw';
+    process.env.BRING_EMAIL = 'test@example.com';
+    process.env.BRING_PASSWORD = 'pw';
     sent = [];
     global.fetch = jest.fn().mockImplementation((url: string, init: { body?: string }) => {
       sent.push({ url: String(url), body: String(init?.body ?? '') });

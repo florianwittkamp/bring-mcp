@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { BringClient } from '../bringClient.js';
 import { registerTool } from '../index.js';
 import { listUuidParam } from '../schemaShared.js';
+import { READ_ONLY_TOOL_ANNOTATIONS } from '../toolAnnotations.js';
 
 export function registerUserTools(server: McpServer, bc: BringClient) {
   const getAllUsersFromListParams = z.object({
@@ -17,6 +18,7 @@ export function registerUserTools(server: McpServer, bc: BringClient) {
     actionFn: async (args: z.infer<typeof getAllUsersFromListParams>, bc: BringClient) =>
       bc.getAllUsersFromList(args.listUuid),
     failureMessage: 'Failed to get all users from list',
+    annotations: READ_ONLY_TOOL_ANNOTATIONS,
   });
 
   registerTool({
@@ -27,6 +29,7 @@ export function registerUserTools(server: McpServer, bc: BringClient) {
     schemaShape: undefined,
     actionFn: async (_args: undefined, bc: BringClient) => bc.getUserSettings(),
     failureMessage: 'Failed to get user settings',
+    annotations: READ_ONLY_TOOL_ANNOTATIONS,
   });
 
   registerTool({
@@ -37,6 +40,7 @@ export function registerUserTools(server: McpServer, bc: BringClient) {
     schemaShape: undefined,
     actionFn: async (_args: undefined, bc: BringClient) => bc.getPendingInvitations(),
     failureMessage: 'Failed to get pending invitations',
+    annotations: READ_ONLY_TOOL_ANNOTATIONS,
   });
 
   registerTool({
@@ -72,5 +76,6 @@ export function registerUserTools(server: McpServer, bc: BringClient) {
     transformResult: (result: string) => ({
       content: [{ type: 'text', text: result }],
     }),
+    annotations: READ_ONLY_TOOL_ANNOTATIONS,
   });
 }

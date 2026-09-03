@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { BringClient } from '../bringClient.js';
 import { registerTool } from '../index.js';
+import { READ_ONLY_TOOL_ANNOTATIONS } from '../toolAnnotations.js';
 
 export function registerCatalogTools(server: McpServer, bc: BringClient) {
   const loadTranslationsParams = z.object({
@@ -19,6 +20,7 @@ export function registerCatalogTools(server: McpServer, bc: BringClient) {
     schemaShape: loadTranslationsParams.shape,
     actionFn: async (args: z.infer<typeof loadTranslationsParams>, bc: BringClient) => bc.loadTranslations(args.locale),
     failureMessage: 'Failed to load translations',
+    annotations: READ_ONLY_TOOL_ANNOTATIONS,
   });
 
   const loadCatalogParams = z.object({
@@ -32,5 +34,6 @@ export function registerCatalogTools(server: McpServer, bc: BringClient) {
     schemaShape: loadCatalogParams.shape,
     actionFn: async (args: z.infer<typeof loadCatalogParams>, bc: BringClient) => bc.loadCatalog(args.locale),
     failureMessage: 'Failed to load catalog',
+    annotations: READ_ONLY_TOOL_ANNOTATIONS,
   });
 }
