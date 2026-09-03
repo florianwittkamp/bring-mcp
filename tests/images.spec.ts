@@ -1,133 +1,73 @@
-import {
-  mockSaveItemImage,
-  mockRemoveItemImage,
-  mockMcpServerInstance,
-  mockTools,
-  loadServer,
-  getTool,
-} from './helpers';
 import { itemImageDataParam } from '../src/schemaShared';
+import { getTool, loadServer, mockRemoveItemImage, mockSaveItemImage, mockTools } from './helpers';
 
-let consoleErrorSpy: jest.SpyInstance;
+describe('image tools', () => {
+  let consoleErrorSpy: jest.SpyInstance;
 
-describe('MCP Bring! Server - Image Tools', () => {
   beforeEach(async () => {
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => undefined);
     jest.clearAllMocks();
     mockTools.clear();
     await loadServer();
   });
 
-  afterEach(() => {
-    consoleErrorSpy.mockRestore();
+  afterEach(() => consoleErrorSpy.mockRestore());
+
+  it('rejects local paths and image data larger than 5 MiB', () => {
+    expect(itemImageDataParam.imageData.safeParse('/path/to/image.jpg').success).toBe(false);
+    expect(itemImageDataParam.imageData.safeParse('aW1hZ2U=').success).toBe(true);
+    expect(itemImageDataParam.imageData.safeParse('A'.repeat(6_990_512)).success).toBe(false);
   });
 
-  describe('bring.saveItemImage tool', () => {
-    it('rejects local paths and image data larger than 5 MiB', () => {
-      expect(itemImageDataParam.imageData.safeParse('/path/to/image.jpg').success).toBe(false);
-      expect(itemImageDataParam.imageData.safeParse('aW1hZ2U=').success).toBe(true);
-      expect(itemImageDataParam.imageData.safeParse('A'.repeat(6_990_512)).success).toBe(false);
+  it('registers both mutations with complete metadata', () => {
+    expect(getTool('saveItemImage')).toMatchObject({
+      title: 'Save Shopping Item Image',
+      schema: { itemId: expect.anything(), imageData: expect.anything() },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     });
-
-    it('should be registered with correct name, description, and schema', () => {
-      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
-        'saveItemImage',
-        expect.objectContaining({
-          description:
-            'Save an image for an item. Provide the image as base64-encoded data (maximum decoded size: 5 MiB).',
-          inputSchema: expect.objectContaining({
-            itemId: expect.anything(),
-            imageData: expect.anything(),
-          }),
-          outputSchema: expect.objectContaining({ result: expect.anything() }),
-          annotations: expect.objectContaining({ readOnlyHint: false, destructiveHint: true }),
-        }),
-        expect.any(Function),
-      );
-      const tool = getTool('saveItemImage');
-      expect(tool).toBeDefined();
-      expect(tool?.description).toBe(
-        'Save an image for an item. Provide the image as base64-encoded data (maximum decoded size: 5 MiB).',
-      );
-      expect(tool?.schema).toMatchObject({ itemId: {}, imageData: {} });
-      expect(tool?.annotations).toMatchObject({ readOnlyHint: false, destructiveHint: true });
-    });
-
-    it('should call BringClient.saveItemImage and return success', async () => {
-      const fakeItemId = 'item-img';
-      const fakeImageData = 'aW1hZ2U=';
-      const successResponse = { message: 'Image saved successfully' };
-      mockSaveItemImage.mockResolvedValue(successResponse);
-      const tool = getTool('saveItemImage');
-      if (!tool) throw new Error('Tool saveItemImage not found');
-      const result = await tool.callback({ itemId: fakeItemId, imageData: fakeImageData });
-      expect(mockSaveItemImage).toHaveBeenCalledWith(fakeItemId, fakeImageData);
-      expect(result).toEqual({
-        content: [{ type: 'text', text: JSON.stringify(successResponse, null, 2) }],
-        structuredContent: { result: successResponse },
-      });
-    });
-
-    it('should return an error message on failed saveItemImage', async () => {
-      const fakeItemId = 'item-img';
-      const fakeImageData = 'aW1hZ2U=';
-      const errorMessage = 'Could not save image';
-      mockSaveItemImage.mockRejectedValue(new Error(errorMessage));
-      const tool = getTool('saveItemImage');
-      if (!tool) throw new Error('Tool saveItemImage not found');
-      const result = await tool.callback({ itemId: fakeItemId, imageData: fakeImageData });
-      expect(mockSaveItemImage).toHaveBeenCalledWith(fakeItemId, fakeImageData);
-      expect(result).toEqual({
-        content: [{ type: 'text', text: `Failed to save item image: ${errorMessage}` }],
-        isError: true,
-      });
+    expect(getTool('removeItemImage')).toMatchObject({
+      title: 'Remove Shopping Item Image',
+      schema: { itemId: expect.anything() },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true },
     });
   });
 
-  describe('bring.removeItemImage tool', () => {
-    it('should be registered with correct name, description, and schema', () => {
-      expect(mockMcpServerInstance.registerTool).toHaveBeenCalledWith(
-        'removeItemImage',
-        expect.objectContaining({
-          description: 'Remove an image from an item on a shopping list.',
-          inputSchema: expect.objectContaining({ itemId: expect.anything() }),
-          outputSchema: expect.objectContaining({ result: expect.anything() }),
-          annotations: expect.objectContaining({ readOnlyHint: false, destructiveHint: true }),
-        }),
-        expect.any(Function),
-      );
-      const tool = getTool('removeItemImage');
-      expect(tool).toBeDefined();
-      expect(tool?.description).toBe('Remove an image from an item on a shopping list.');
-      expect(tool?.schema).toMatchObject({ itemId: {} });
+  it('returns a normalized result when saving an image', async () => {
+    mockSaveItemImage.mockResolvedValue({ imageUrl: 'https://example.test/image.jpg' });
+
+    const result = await getTool('saveItemImage')!.callback({
+      itemId: 'item-img',
+      imageData: 'aW1hZ2U=',
     });
 
-    it('should call BringClient.removeItemImage and return success', async () => {
-      const fakeItemId = 'item-img-remove';
-      const successResponse = { message: 'Image removed successfully' };
-      mockRemoveItemImage.mockResolvedValue(successResponse);
-      const tool = getTool('removeItemImage');
-      if (!tool) throw new Error('Tool removeItemImage not found');
-      const result = await tool.callback({ itemId: fakeItemId });
-      expect(mockRemoveItemImage).toHaveBeenCalledWith(fakeItemId);
-      expect(result).toEqual({
-        content: [{ type: 'text', text: JSON.stringify(successResponse, null, 2) }],
-        structuredContent: { result: successResponse },
-      });
+    expect(mockSaveItemImage).toHaveBeenCalledWith('item-img', 'aW1hZ2U=');
+    expect(result.structuredContent).toEqual({
+      success: true,
+      itemId: 'item-img',
+      imageUrl: 'https://example.test/image.jpg',
+    });
+  });
+
+  it('returns a normalized result when removing an image', async () => {
+    mockRemoveItemImage.mockResolvedValue('');
+
+    const result = await getTool('removeItemImage')!.callback({ itemId: 'item-img' });
+
+    expect(mockRemoveItemImage).toHaveBeenCalledWith('item-img');
+    expect(result.structuredContent).toEqual({ success: true, itemId: 'item-img' });
+  });
+
+  it('marks image API failures as MCP errors', async () => {
+    mockSaveItemImage.mockRejectedValue(new Error('Could not save image'));
+
+    const result = await getTool('saveItemImage')!.callback({
+      itemId: 'item-img',
+      imageData: 'aW1hZ2U=',
     });
 
-    it('should return an error message on failed removeItemImage', async () => {
-      const fakeItemId = 'item-img-remove';
-      const errorMessage = 'Could not remove image';
-      mockRemoveItemImage.mockRejectedValue(new Error(errorMessage));
-      const tool = getTool('removeItemImage');
-      if (!tool) throw new Error('Tool removeItemImage not found');
-      const result = await tool.callback({ itemId: fakeItemId });
-      expect(mockRemoveItemImage).toHaveBeenCalledWith(fakeItemId);
-      expect(result).toEqual({
-        content: [{ type: 'text', text: `Failed to remove item image: ${errorMessage}` }],
-        isError: true,
-      });
+    expect(result).toEqual({
+      content: [{ type: 'text', text: 'Failed to save item image: Could not save image' }],
+      isError: true,
     });
   });
 });

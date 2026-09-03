@@ -1,4 +1,4 @@
-import type { ToolAnnotations } from '@modelcontextprotocol/sdk/types.js';
+import type { ToolAnnotations } from '@modelcontextprotocol/server';
 
 export const READ_ONLY_TOOL_ANNOTATIONS = {
   readOnlyHint: true,
@@ -10,6 +10,6 @@ export const READ_ONLY_TOOL_ANNOTATIONS = {
 export const MUTATING_TOOL_ANNOTATIONS = {
   readOnlyHint: false,
   destructiveHint: true,
-  idempotentHint: false,
+  idempotentHint: true,
   openWorldHint: true,
 } satisfies ToolAnnotations;

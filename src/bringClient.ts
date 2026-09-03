@@ -198,3 +198,22 @@ export class BringClient {
     return results;
   }
 }
+
+export type BringService = Pick<
+  BringClient,
+  | 'loadLists'
+  | 'getItems'
+  | 'getItemsDetails'
+  | 'saveItem'
+  | 'saveItemBatch'
+  | 'removeItem'
+  | 'moveToRecentList'
+  | 'saveItemImage'
+  | 'removeItemImage'
+  | 'getAllUsersFromList'
+  | 'getUserSettings'
+  | 'loadTranslations'
+  | 'loadCatalog'
+  | 'getPendingInvitations'
+  | 'deleteMultipleItemsFromList'
+>;
