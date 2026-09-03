@@ -87,14 +87,13 @@ describe('BringClient functionality', () => {
   });
 
   test('deleteMultipleItemsFromList removes each item', async () => {
-    mockRemoveItem.mockResolvedValueOnce('ok1').mockResolvedValueOnce('ok2');
     const bc = new BringClient();
 
-    const result = await bc.deleteMultipleItemsFromList('listC', ['x', 'y']);
+    await bc.deleteMultipleItemsFromList('listC', ['x', 'y']);
 
-    expect(mockRemoveItem).toHaveBeenNthCalledWith(1, 'listC', 'x');
-    expect(mockRemoveItem).toHaveBeenNthCalledWith(2, 'listC', 'y');
-    expect(result).toEqual(['ok1', 'ok2']);
+    expect(sentBodies).toHaveLength(2);
+    expect(new URLSearchParams(sentBodies[0]).get('remove')).toBe('x');
+    expect(new URLSearchParams(sentBodies[1]).get('remove')).toBe('y');
   });
 
   test('loadTranslations defaults to en-US when no locale is provided', async () => {

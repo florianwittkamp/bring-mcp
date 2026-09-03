@@ -182,7 +182,7 @@ export class BringClient {
     for (const itemName of itemNames) {
       // Assuming itemId is the same as itemName for removal,
       // consistent with how getItems structures it and how removeItem is likely used.
-      const result = await this.bring.removeItem(listUuid, itemName);
+      const result = await this.removeItem(listUuid, itemName);
       results.push(result);
     }
     return results;

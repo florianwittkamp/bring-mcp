@@ -67,6 +67,12 @@ describe('legacy list mutation encoding', () => {
     expect(bodyOf(1).get('recently')).toBe('Salt + Pepper');
   });
 
+  test('escapes names when removing multiple items', async () => {
+    await new BringClient().deleteMultipleItemsFromList(LIST, ['Fish & Chips', 'Salt + Pepper']);
+    expect(bodyOf(0).get('remove')).toBe('Fish & Chips');
+    expect(bodyOf(1).get('remove')).toBe('Salt + Pepper');
+  });
+
   test('throws instead of silently reporting success on a non-2xx', async () => {
     global.fetch = jest.fn().mockResolvedValue({
       ok: false,
