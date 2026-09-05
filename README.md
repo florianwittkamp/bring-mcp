@@ -36,6 +36,61 @@ This is the recommended and most portable configuration. It ensures you always u
 
 ---
 
+## 💬 Using with ChatGPT via OpenAI Secure MCP Tunnel
+
+[OpenAI Secure MCP Tunnel](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels) lets ChatGPT reach this STDIO server without exposing it through a public endpoint. The tunnel client itself is provided as a downloadable binary, while `bring-mcp` can still be launched through `npx` without a local checkout or installation.
+
+### Prerequisites
+
+- Node.js 22 or newer, including `npm`/`npx`
+- ChatGPT developer-mode access
+- `Tunnels Read + Use` permissions in the relevant OpenAI Platform organization
+- A tunnel ID and runtime API key from [OpenAI Platform tunnel settings](https://platform.openai.com/settings/organization/tunnels)
+- The `tunnel-client` binary, available from the download link in the tunnel settings
+
+When creating the tunnel, associate it with the ChatGPT workspace in which you want to use Bring. Otherwise, it will not appear when creating the ChatGPT connection.
+
+### Configure and run the tunnel
+
+Export the tunnel API key and your Bring! credentials in the shell that will run `tunnel-client`:
+
+```bash
+export CONTROL_PLANE_API_KEY="sk-..."
+export BRING_EMAIL="your_bring_email@example.com"
+export BRING_PASSWORD="YOUR_BRING_PASSWORD_HERE"
+```
+
+Create a tunnel profile that starts the latest published `bring-mcp` package through `npx`:
+
+```bash
+tunnel-client init \
+  --sample sample_mcp_stdio_local \
+  --profile bring-mcp \
+  --tunnel-id tunnel_0123456789abcdef0123456789abcdef \
+  --mcp-command "npx -y bring-mcp@latest"
+```
+
+Validate the configuration, then start the tunnel:
+
+```bash
+tunnel-client doctor --profile bring-mcp --explain
+tunnel-client run --profile bring-mcp
+```
+
+Keep this process running while using the integration. The environment variables above are inherited by the `npx`-started MCP server.
+
+### Connect the tunnel in ChatGPT
+
+1. In ChatGPT, open **Settings → Security and login** and enable **Developer mode**.
+2. Open [ChatGPT Plugins](https://chatgpt.com/plugins) and select the plus button to create a developer-mode app.
+3. Enter a name and description, choose **Tunnel** under **Connection**, and select the tunnel created above (or enter its `tunnel_id`).
+4. Create the connection and review the 16 discovered Bring! tools.
+5. Start a new chat, enable the Bring connection from the tools menu, and try a request such as “Show my Bring shopping lists.”
+
+If ChatGPT cannot discover the server, make sure `tunnel-client run` is still active, rerun the `doctor` command, and verify that the tunnel is associated with the correct ChatGPT workspace. Secure MCP Tunnel is intended for private connections and developer-mode testing; publishing a public ChatGPT plugin requires a stable public HTTPS MCP endpoint.
+
+---
+
 ## 🚀 Features
 
 - **Automatic Authentication**: No manual login required - authentication happens automatically on first API call
