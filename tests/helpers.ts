@@ -3,7 +3,7 @@
 import { jest } from '@jest/globals';
 import type { BringService } from '../src/bringClient.js';
 
-type AsyncMock = jest.MockedFunction<(...args: never[]) => Promise<unknown>>;
+type AsyncMock = jest.MockedFunction<(...args: unknown[]) => Promise<unknown>>;
 
 export const mockLoadLists = jest.fn() as AsyncMock;
 export const mockGetItems = jest.fn() as AsyncMock;
