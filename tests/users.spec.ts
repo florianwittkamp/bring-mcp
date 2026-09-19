@@ -59,6 +59,40 @@ describe('user tools', () => {
     expect(invitationResult.structuredContent).toEqual(invitations);
   });
 
+  it('returns list members who have no profile photo', async () => {
+    // Bring! omits photoPath entirely for a member without a photo. A strict
+    // schema rejected the whole response, so no member could be listed at all.
+    const users = {
+      users: [
+        {
+          publicUuid: 'user-1',
+          name: 'Alice',
+          email: 'alice@example.test',
+          photoPath: 'https://example.test/alice.jpg',
+          pushEnabled: true,
+          plusTryOut: false,
+          country: 'DE',
+          language: 'de-DE',
+        },
+        {
+          publicUuid: 'user-2',
+          name: 'Bob',
+          email: 'bob@example.test',
+          pushEnabled: false,
+          plusTryOut: false,
+          country: 'PT',
+          language: 'pt-PT',
+        },
+      ],
+    };
+    mockGetAllUsersFromList.mockResolvedValue(users);
+
+    const result = await getTool('getAllUsersFromList')!.callback({ listUuid: 'list-1' });
+
+    expect(result.isError).toBeUndefined();
+    expect(result.structuredContent).toEqual(users);
+  });
+
   it('normalizes both global and per-list setting keys', async () => {
     mockGetUserSettings.mockResolvedValue({
       userSettings: [{ key: 'defaultListUUID', value: 'list-1' }],
