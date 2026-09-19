@@ -77,7 +77,8 @@ export const listUserSchema = z.object({
   publicUuid: z.string(),
   name: z.string(),
   email: z.string(),
-  photoPath: z.string(),
+  // Absent (not empty) for a member who has no profile photo.
+  photoPath: z.string().optional(),
   pushEnabled: z.boolean(),
   plusTryOut: z.boolean(),
   country: z.string(),
