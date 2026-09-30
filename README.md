@@ -16,6 +16,7 @@ The server integrates the `bring-shopping` npm package for Bring! API access and
 ## 🐳 Docker + OpenAI Secure MCP Tunnel (this fork)
 
 For an environment-only Docker setup, follow the
+[English setup guide](docs/docker-openai-tunnel.en.md) or the
 [German setup guide](docs/docker-openai-tunnel.de.md). Copy `.env.example` to
 `.env`, fill in your Bring! credentials, OpenAI tunnel ID, and runtime API key,
 then run `docker compose up -d --build`.

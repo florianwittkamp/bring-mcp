@@ -1,5 +1,7 @@
 # Bring! mit Docker und OpenAI Secure MCP Tunnel
 
+[English](docker-openai-tunnel.en.md) | Deutsch
+
 Dieser Fork startet den lokal gebauten Bring!-MCP-Server und den offiziellen
 OpenAI-Tunnel-Client gemeinsam in einem Docker-Container. Der Tunnel-Client
 startet Bring! als STDIO-Unterprozess. Es sind keine öffentliche Domain und
@@ -10,8 +12,7 @@ keine eingehenden Firewall-Freigaben erforderlich.
 Docker mit Compose wird benötigt. Node.js und `tunnel-client` sind im Image
 enthalten und müssen auf dem Host nicht installiert werden.
 
-In dieser vorbereiteten Arbeitskopie liegt bereits eine leere `.env`. Bei
-einem frischen Clone des Forks legst du sie einmalig an:
+Falls du noch keine `.env` angelegt hast, kopiere die Vorlage einmalig:
 
 ```bash
 cp .env.example .env
