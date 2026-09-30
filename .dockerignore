@@ -1,0 +1,12 @@
+.git
+.github
+.cursor
+node_modules
+build
+coverage
+.env
+.env.*
+*.log
+assets
+docs
+docker/smoke-test.cjs

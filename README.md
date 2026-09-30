@@ -13,6 +13,19 @@ The server integrates the `bring-shopping` npm package for Bring! API access and
 
 ---
 
+## 🐳 Docker + OpenAI Secure MCP Tunnel (this fork)
+
+For an environment-only Docker setup, follow the
+[German setup guide](docs/docker-openai-tunnel.de.md). Copy `.env.example` to
+`.env`, fill in your Bring! credentials, OpenAI tunnel ID, and runtime API key,
+then run `docker compose up -d --build`.
+
+The container builds this fork locally and runs Bring! under the official
+OpenAI tunnel client. The local status UI is available at
+<http://localhost:8090/ui>.
+
+---
+
 ## 🧩 Recommended Claude Desktop Configuration
 
 To use this server in Claude Desktop via `npx`, insert the following into your `claude_desktop_config.json` file:
