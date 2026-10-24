@@ -19,11 +19,15 @@ For an environment-only Docker setup, follow the
 [English setup guide](docs/docker-openai-tunnel.en.md) or the
 [German setup guide](docs/docker-openai-tunnel.de.md). Copy `.env.example` to
 `.env`, fill in your Bring! credentials, OpenAI tunnel ID, and runtime API key,
-then run `docker compose up -d --build`.
+then run `docker compose pull` and `docker compose up -d --no-build`.
 
-The container builds this fork locally and runs Bring! under the official
-OpenAI tunnel client. The local status UI is available at
+GitHub Actions builds the image for AMD64 and ARM64 and publishes it as
+`ghcr.io/tooker/bring-mcp:latest` (also tagged `:tunnel`). The container runs
+Bring! under the official OpenAI tunnel client. The local status UI is available at
 <http://localhost:8090/ui>.
+
+See [image builds and updates](docs/docker-images.md) for tags, registry access,
+and local builds.
 
 ---
 
