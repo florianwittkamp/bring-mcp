@@ -1,6 +1,6 @@
 services:
   bring-mcp:
-    image: bring-mcp:tunnel
+    image: ghcr.io/tooker/bring-mcp:latest
     build:
       context: .
     env_file:

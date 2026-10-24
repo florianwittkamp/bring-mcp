@@ -2,7 +2,7 @@
 
 English | [Deutsch](docker-openai-tunnel.de.md)
 
-This fork runs the locally built Bring! MCP server and the official OpenAI
+This fork runs the Bring! MCP server built by GitHub Actions and the official OpenAI
 tunnel client together in a Docker container. The tunnel client starts Bring!
 as a STDIO subprocess. No public domain or inbound firewall rules are required.
 
@@ -46,10 +46,15 @@ image. Changes to `.env` take effect when you recreate the container.
 Run these commands from the project directory:
 
 ```bash
-docker compose up -d --build
+docker compose pull
+docker compose up -d --no-build
 docker compose ps
 docker compose logs --tail=100 -f bring-mcp
 ```
+
+Compose uses `ghcr.io/tooker/bring-mcp:latest`, built for AMD64 and ARM64.
+Use the same commands to update. See [image builds and registry access](docker-images.md)
+if the package requires authentication or you want to build locally.
 
 The local status UI is available at
 [http://localhost:8090/ui](http://localhost:8090/ui). The published port is
@@ -123,7 +128,7 @@ The following test uses only fictitious credentials and a local control-plane
 server inside a container without network access:
 
 ```bash
-docker compose build
+docker build -t bring-mcp:tunnel .
 docker run --rm -i --network none --read-only --tmpfs /tmp:mode=1777 \
   --cap-drop ALL --security-opt no-new-privileges:true \
   --entrypoint node bring-mcp:tunnel < docker/smoke-test.cjs
